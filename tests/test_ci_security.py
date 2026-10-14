@@ -1,6 +1,7 @@
 """Regression tests for fail-closed dependency and release gates."""
 import datetime as dt
 import importlib.util
+import io
 from pathlib import Path
 import tempfile
 import unittest
@@ -38,6 +39,20 @@ class SecurityGateTests(unittest.TestCase):
         with patch.object(security, "api", return_value=release):
             with self.assertRaisesRegex(ValueError, "cooldown"):
                 security.check_download(item, 7)
+
+    def test_download_checksum_mismatch_does_not_leave_executable_artifact(self):
+        with tempfile.TemporaryDirectory() as folder:
+            item = {"name": "json", "asset": "json.jar", "url": "https://repo.maven.apache.org/example.jar", "sha256": "0" * 64}
+            data = {"cooldown_days": 7, "downloads": [item]}
+            with patch.object(security, "ROOT", Path(folder)), patch.object(security, "check_download"), patch.object(security, "request", return_value=io.BytesIO(b"incorrect bytes")):
+                with self.assertRaisesRegex(ValueError, "checksum"):
+                    security.download(data, ["json"])
+            self.assertEqual(list(Path(folder, "build/tools").iterdir()), [])
+
+    def test_missing_codeql_output_blocks_release(self):
+        with tempfile.TemporaryDirectory() as folder:
+            with self.assertRaisesRegex(ValueError, "did not produce"):
+                security.sarif(folder)
 
 
 if __name__ == "__main__":
