@@ -11,6 +11,8 @@ import os
 from pathlib import Path
 import re
 import sys
+import time
+import urllib.error
 import urllib.parse
 import urllib.request
 import zipfile
@@ -27,7 +29,18 @@ def request(url, method="GET"):
         token = os.environ.get("GH_TOKEN") or os.environ.get("GITHUB_TOKEN")
         if token:
             headers["Authorization"] = "Bearer " + token
-    return urllib.request.urlopen(urllib.request.Request(url, headers=headers, method=method), timeout=120)
+    for attempt in range(4):
+        try:
+            return urllib.request.urlopen(urllib.request.Request(url, headers=headers, method=method), timeout=120)
+        except urllib.error.HTTPError as error:
+            detail = error.read(8192).decode("utf-8", errors="replace").lower()
+            limited = error.code == 429 or (error.code == 403 and ("rate limit" in detail or error.headers.get("X-RateLimit-Remaining") == "0"))
+            if attempt == 3 or not (limited or error.code in (502, 503, 504)):
+                raise ValueError(f"Dependency metadata request failed (HTTP {error.code}): {url}") from error
+            retry_after = error.headers.get("Retry-After", "")
+            delay = min(60, max(5, int(retry_after))) if retry_after.isdigit() else 5 * (2 ** attempt)
+            print(f"Temporary metadata service failure; retrying after {delay}s", flush=True)
+            time.sleep(delay)
 
 
 def api(path):

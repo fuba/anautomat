@@ -20,6 +20,8 @@ The app verifies HTTPS certificates and hostnames using Android's system trust s
 
 `security/dependencies.lock.json` records exact versions, full action commit SHAs, tool checksums and publication metadata. CI requires **seven complete days** after publication before downloading or executing dependencies. It rechecks upstream release timestamps, Git tag resolution, asset digests and asset modification times, and fails closed when metadata is missing or unavailable. A cached download is still age-checked and hash-checked before use.
 
+Explicit API rate limits and temporary upstream service failures receive bounded retries. Permission denials, missing metadata, young releases and integrity failures do not bypass validation; a persistent failure stops the workflow.
+
 The checkout action receives a separate pre-execution age/tag check before repository code is available. All other actions are checked after checkout and before execution; the attestation action's nested action is checked too. Gitleaks, actionlint, CodeQL and the test-only JSON library are pinned and verified before execution. The CodeQL bundle is supplied explicitly to prevent an implicit latest-version download.
 
 The Android app has no bundled third-party libraries. JVM tests use the locked `org.json:json` artifact. CI checks that artifact against GitHub's advisory database. Gitleaks scans full Git history; actionlint and repository policy checks cover workflow configuration; CodeQL analyzes Java, Python and Actions and blocks high-severity findings. Checks run on pull requests, main-branch pushes, release tags and a weekly schedule. Failures prevent release publication.

@@ -4,6 +4,7 @@ import importlib.util
 import io
 from pathlib import Path
 import tempfile
+import urllib.error
 import unittest
 from unittest.mock import patch
 
@@ -59,6 +60,23 @@ class SecurityGateTests(unittest.TestCase):
             Path(folder, "java.sarif").write_text('{"runs":[{"tool":{"driver":{"name":"CodeQL"},"extensions":[{"rules":[{"id":"test","properties":{"security-severity":"7.5"}}]}]},"results":[{"ruleId":"test","rule":{"id":"test","toolComponent":{"index":0}},"level":"warning"}]}]}')
             with self.assertRaisesRegex(ValueError, "High-severity"):
                 security.sarif(folder)
+
+    def test_rate_limit_retry_preserves_validation(self):
+        limited = urllib.error.HTTPError("https://api.github.com/test", 403, "Forbidden", {}, io.BytesIO(b'{"message":"secondary rate limit"}'))
+        success = io.BytesIO(b'{"verified":true}')
+        with patch.object(security.urllib.request, "urlopen", side_effect=[limited, success]) as opened, patch.object(security.time, "sleep") as sleep:
+            with security.request("https://api.github.com/test") as response:
+                self.assertEqual(response.read(), b'{"verified":true}')
+            self.assertEqual(opened.call_count, 2)
+            sleep.assert_called_once_with(5)
+
+    def test_permission_denial_is_not_treated_as_rate_limit(self):
+        denied = urllib.error.HTTPError("https://api.github.com/test", 403, "Forbidden", {}, io.BytesIO(b'{"message":"forbidden"}'))
+        with patch.object(security.urllib.request, "urlopen", side_effect=denied) as opened, patch.object(security.time, "sleep") as sleep:
+            with self.assertRaisesRegex(ValueError, "HTTP 403"):
+                security.request("https://api.github.com/test")
+            self.assertEqual(opened.call_count, 1)
+            sleep.assert_not_called()
 
 
 if __name__ == "__main__":
