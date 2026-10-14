@@ -95,4 +95,6 @@
  <string name="http_failure">OpenAI request failed (%1$d)</string>
  <string name="app_language">App language</string>
  <string name="service_description">Observe the screen and execute your goals. Screenshots and visible text are sent directly to OpenAI only while a goal is running.</string>
+    <string name="input_method_requires_13">Terminal input requires Android 13 or later.</string>
+    <string name="input_connection_missing">Tap an input field and show its keyboard first.</string>
 </resources>

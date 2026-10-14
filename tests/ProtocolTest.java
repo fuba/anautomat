@@ -41,6 +41,10 @@ public final class ProtocolTest {
   reject(()->Protocol.validateAction(new JSONObject("{\"type\":\"tap\",\"reason\":\"\",\"x\":100,\"y\":1}"),100,100));
   reject(()->Protocol.validateAction(new JSONObject("{\"type\":\"tap\",\"reason\":\"\",\"x\":\"1\",\"y\":1}"),100,100));
   reject(()->Protocol.validateAction(new JSONObject("{\"type\":\"shell\",\"reason\":\"\"}"),100,100));
+  check(Protocol.validateAction(new JSONObject().put("type","input_text").put("reason","terminal").put("text","echo test\n"),100,100).getString("text").endsWith("\n"));
+  check(Protocol.validateAction(new JSONObject().put("type","press_enter").put("reason","submit"),100,100).getString("type").equals("press_enter"));
+  reject(()->Protocol.validateAction(new JSONObject().put("type","input_text").put("reason","bad").put("text",JSONObject.NULL),100,100));
+  reject(()->Protocol.validateAction(new JSONObject().put("type","input_text").put("reason","too long").put("text","x".repeat(10001)),100,100));
   UsageMeter meter=new UsageMeter();String completed="data: {\"type\":\"response.completed\",\"response\":{\"status\":\"completed\",\"usage\":{\"input_tokens\":100,\"output_tokens\":20,\"total_tokens\":120}}}\n\n";
   Protocol.readResponse(new StringReader(delta+completed),meter::usage);Protocol.readResponse(new StringReader(delta+completed),meter::usage);check(meter.summary().contains("240 tokens"));
   meter.headers("1234");check(meter.summary().contains("Rate-limit tokens remaining: 1234"));meter.headers(null);check(meter.summary().equals("Goal usage: 240 tokens"));

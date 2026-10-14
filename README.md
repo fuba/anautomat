@@ -1,8 +1,16 @@
 # anautomat
 
-An Android-only agent that executes goals by observing the screen and controlling apps with Android Accessibility. Sign in with ChatGPT, enter a goal, and keep control through a small floating button.
+**Give your phone a goal. Let it build the tool.**
 
-[Download the latest APK](https://github.com/fuba/anautomat/releases/latest/download/anautomat.apk) · [Releases](https://github.com/fuba/anautomat/releases) · [Security policy](SECURITY.md)
+An Android agent that sees the screen, operates across apps, and runs entirely on the device. Sign in with ChatGPT and keep control through a small floating button.
+
+[Download APK](https://github.com/fuba/anautomat/releases/latest/download/anautomat.apk) · [Watch the demo](https://github.com/fuba/anautomat/releases/download/v0.1.2/anautomat-fractal-demo.mp4) · [Security](SECURITY.md)
+
+[![One goal creates a working Mandelbrot explorer on Android](docs/demo/fractal-demo.gif)](https://github.com/fuba/anautomat/releases/download/v0.1.2/anautomat-fractal-demo.mp4)
+
+One goal. **32 steps. A working Mandelbrot explorer.** anautomat installs Python in Termux, writes an HTML/JavaScript canvas app, starts a server on `127.0.0.1`, opens Chrome, zooms twice, and resets the view. The generated app has no external code dependencies.
+
+The video shows a real emulator run. The 54-second edit labels accelerated sections; the GIF is a further sped-up preview. [Full recording](https://github.com/fuba/anautomat/releases/download/v0.1.2/anautomat-fractal-full.mp4), [exact goal and setup](docs/demo/README.md), and [generated source](docs/demo/generated-index.html) are available. The PC installed the APKs and recorded the emulator; inference and every goal action ran inside Android.
 
 ## Install
 
@@ -55,9 +63,9 @@ Local history and the latest-run recovery copy are encrypted with Android Keysto
 
 During execution, screenshots, visible UI text, installed-app labels, the goal and action history are sent directly to the official OpenAI Responses endpoint. OAuth tokens are encrypted, backed up neither by Android nor this repository, and refreshed when required.
 
-Supported actions: launch app, tap, long press, swipe, replace focused editable text, Back, Home, Recents, notifications, quick settings, wait and completion/block reporting. The planner re-observes the screen after each action.
+Supported actions: launch app, tap, long press, swipe, replace focused editable text, commit text to custom inputs such as Termux and press Enter (Android 13+), Back, Home, Recents, notifications, quick settings, wait and completion/block reporting. The planner re-observes the screen after each action.
 
-Protected screens, unlocking, biometric authentication, root-only operations, arbitrary key injection, multitouch and some custom input fields are unsupported. Sensitive actions require explicit goal authorization in the model prompt; this does not constitute a complete approval system. The app has not been prepared for Play Store distribution.
+Protected screens, unlocking, biometric authentication, root-only operations, arbitrary key injection beyond Enter, multitouch and input fields without an Android input connection are unsupported. Sensitive actions require explicit goal authorization in the model prompt; this does not constitute a complete approval system. The app has not been prepared for Play Store distribution.
 
 Completed responses contribute to displayed goal token usage. A numeric rate-limit remaining-tokens header is shown only when the API provides it. This is not the remaining allowance of the entire ChatGPT plan. Cancelled or failed requests without a completed usage event cannot be counted.
 

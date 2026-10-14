@@ -1,3 +1,7 @@
+This release adds native Android input-method actions for terminals and other custom input fields on Android 13 or later. The regular editable-field replacement action remains available on Android 11+.
+
+The demo shows one goal installing Python in Termux, generating a Mandelbrot explorer, serving it on localhost, and verifying zoom/reset in Chrome. See the README for the exact goal, generated source, edited video and full recording.
+
 Android-only goal execution with ChatGPT sign-in, a floating control menu, voice input, pause/resume, step-budget continuation and automatic log export. English and Japanese interfaces are included.
 
 Download **anautomat.apk** below and install it on Android 11 or later. Enable the app in Accessibility settings, then complete **Continue with ChatGPT** in your browser. No PC bridge or API key is needed after installation.

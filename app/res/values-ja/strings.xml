@@ -95,4 +95,6 @@
  <string name="http_failure">OpenAI への通信に失敗しました (%1$d)</string>
  <string name="app_language">アプリの言語</string>
  <string name="service_description">画面を観察して Goal を実行します。実行中のみスクリーンショットと表示テキストを OpenAI に直接送信します。</string>
+    <string name="input_method_requires_13">ターミナルへの入力には Android 13 以降が必要です。</string>
+    <string name="input_connection_missing">入力欄をタップしてキーボードを表示してください。</string>
 </resources>
