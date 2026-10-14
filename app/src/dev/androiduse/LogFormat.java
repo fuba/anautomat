@@ -4,7 +4,11 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 
 final class LogFormat {
- static String compact(String text){return text.replace("\r\n","\n").replace('\r','\n').replaceAll("[\\t ]+\\n","\n").replaceAll("\\n{2,}","\n").trim();}
+ static String compact(String text){
+  String normalized=text.replace("\r\n","\n").replace('\r','\n');StringBuilder out=new StringBuilder();int start=0;
+  for(int i=0;i<=normalized.length();i++){if(i==normalized.length()||normalized.charAt(i)=='\n'){int end=i;while(end>start&&(normalized.charAt(end-1)==' '||normalized.charAt(end-1)=='\t'))end--;if(end>start){if(out.length()>0)out.append('\n');out.append(normalized,start,end);}start=i+1;}}
+  return out.toString().trim();
+ }
  static String filename(String goal,Date started){
   String title=compact(goal).split("[\\n。！？!?]",2)[0].replaceAll("[\\p{Cntrl}\\\\/:*?\"<>|]"," ").replaceAll("\\s+"," ").trim();
   if(title.isEmpty())title="Goal";

@@ -216,13 +216,18 @@ def sarif(path):
     if not files:
         raise ValueError("CodeQL did not produce SARIF results")
     for file in files:
-        data = json.loads(file.read_text())
+        data = json.loads(file.read_text(encoding="utf-8-sig"))
         for run in data.get("runs", []):
-            rules = {r["id"]: r for r in run.get("tool", {}).get("driver", {}).get("rules", [])}
+            tool = run.get("tool", {})
+            components = [tool.get("driver", {})] + tool.get("extensions", [])
+            rules = {r["id"]: r for component in components for r in component.get("rules", [])}
             for result in run.get("results", []):
-                score = float(rules.get(result.get("ruleId"), {}).get("properties", {}).get("security-severity", 0))
+                rule_id = result.get("ruleId") or result.get("rule", {}).get("id")
+                if rule_id not in rules:
+                    raise ValueError("CodeQL finding has no rule metadata: " + str(rule_id))
+                score = float(rules[rule_id].get("properties", {}).get("security-severity", 0))
                 if score >= 7 or result.get("level") == "error":
-                    raise ValueError("High-severity CodeQL finding: " + result.get("ruleId", "unknown"))
+                    raise ValueError("High-severity CodeQL finding: " + rule_id)
     print("PASS: no high-severity CodeQL findings")
 
 

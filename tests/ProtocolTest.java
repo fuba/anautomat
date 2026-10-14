@@ -52,6 +52,7 @@ public final class ProtocolTest {
   check(progress.contains("summary:Checking screen"));check(progress.contains("summary_done:Screen checked"));check(progress.stream().noneMatch(v->v.contains("PRIVATE_REASONING")));check(progress.stream().noneMatch(v->v.contains("hello")));
   StepBudget budget=new StepBudget();for(int i=0;i<99;i++)budget.consume();check(!budget.exhausted(100));budget.consume();check(budget.exhausted(100));check(!budget.exhausted(101));budget.renew();check(!budget.exhausted(1));budget.consume();check(budget.exhausted(1));
   check(LogFormat.compact("  one\n\n\n two  ").equals("one\n two"));check(LogFormat.filename("Open Settings! Detailed steps",new java.util.Date(0)).equals("1970-01-01_09-00-00-000_Open Settings.txt"));check(!LogFormat.filename("a/b:c*?",new java.util.Date()).contains("/"));check(LogFormat.filename("",new java.util.Date()).endsWith("_Goal.txt"));
+  check(LogFormat.compact("A"+"\t".repeat(100000)+"\n\nB").equals("A\nB"));
   System.out.println("PASS: "+passed+" OAuth / JWT / SSE / action / usage / progress checks");
  }
 }

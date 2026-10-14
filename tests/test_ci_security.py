@@ -54,6 +54,12 @@ class SecurityGateTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "did not produce"):
                 security.sarif(folder)
 
+    def test_codeql_extension_rule_metadata_blocks_high_severity(self):
+        with tempfile.TemporaryDirectory() as folder:
+            Path(folder, "java.sarif").write_text('{"runs":[{"tool":{"driver":{"name":"CodeQL"},"extensions":[{"rules":[{"id":"test","properties":{"security-severity":"7.5"}}]}]},"results":[{"ruleId":"test","rule":{"id":"test","toolComponent":{"index":0}},"level":"warning"}]}]}')
+            with self.assertRaisesRegex(ValueError, "High-severity"):
+                security.sarif(folder)
+
 
 if __name__ == "__main__":
     unittest.main()

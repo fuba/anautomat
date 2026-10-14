@@ -12,6 +12,10 @@ The latest release is supported. This is an experimental device-control applicat
 - Pause/stop invalidates outstanding model responses. Gestures already dispatched to Android may finish.
 - Local history is encrypted. User-selected exported log files are plain UTF-8 text and can contain goals, visible-state descriptions and public reasoning summaries. Raw private reasoning and authentication tokens are not logged.
 
+### TLS and the certificate-pinning advisory
+
+The app verifies HTTPS certificates and hostnames using Android's system trust store and restricts requests to `auth.openai.com` and `api.openai.com`. It does not replace certificate verification, accept user-installed CAs, or follow redirects. Certificate/public-key pinning is deliberately absent: this project does not control OpenAI's certificate rotation or have provider-managed backup pins. Android advises against routine pinning because certificate changes can strand installed clients ([Android guidance](https://developer.android.com/privacy-and-security/security-ssl#Pinning)). CodeQL consequently reports `java/android/missing-certificate-pinning` as a medium advisory; it remains visible for review. High-severity findings still block release publication.
+
 ## CI supply chain
 
 `security/dependencies.lock.json` records exact versions, full action commit SHAs, tool checksums and publication metadata. CI requires **seven complete days** after publication before downloading or executing dependencies. It rechecks upstream release timestamps, Git tag resolution, asset digests and asset modification times, and fails closed when metadata is missing or unavailable. A cached download is still age-checked and hash-checked before use.
