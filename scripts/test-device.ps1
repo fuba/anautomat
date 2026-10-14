@@ -1,0 +1,21 @@
+param([string]$Serial='emulator-5556')
+$ErrorActionPreference='Stop'
+$root=Split-Path $PSScriptRoot -Parent
+. "$PSScriptRoot/environment.ps1"
+$bt="$sdk\build-tools\36.0.0"
+$env:JAVA_HOME=$jdk
+$env:PATH="$jdk\bin;$env:PATH"
+function Run([string]$tool,[string[]]$arguments){& $tool @arguments;if($LASTEXITCODE -ne 0){throw "$tool failed"}}
+Set-Location $root
+New-Item -ItemType Directory -Force build\device-tests\classes,build\device-tests\dex | Out-Null
+Run "$bt\aapt2.exe" @('link','-o','build/device-tests/base.apk','--manifest','tests/device/AndroidManifest.xml','-I',"$sdk/platforms/android-36/android.jar")
+Run "$jdk\bin\javac.exe" @('-encoding','UTF-8','-source','11','-target','11','-cp',"$sdk/platforms/android-36/android.jar;build/classes",'-d','build/device-tests/classes','tests/device/src/dev/androiduse/DeviceTests.java')
+Run "$jdk\bin\jar.exe" @('cf','build/device-tests/classes.jar','-C','build/device-tests/classes','.')
+Run "$bt\d8.bat" @('--lib',"$sdk/platforms/android-36/android.jar",'--min-api','30','--output','build/device-tests/dex','build/device-tests/classes.jar')
+Run "$jdk\bin\jar.exe" @('uf','build/device-tests/base.apk','-C','build/device-tests/dex','classes.dex')
+Run "$bt\zipalign.exe" @('-f','4','build/device-tests/base.apk','build/device-tests/aligned.apk')
+Run "$bt\apksigner.bat" @('sign','--ks','build/debug.keystore','--ks-pass','pass:android','--out','build/device-tests/tests.apk','build/device-tests/aligned.apk')
+Run "$sdk\platform-tools\adb.exe" @('-s',$Serial,'install','-r','build/device-tests/tests.apk')
+$testOutput=& "$sdk\platform-tools\adb.exe" -s $Serial shell am instrument -w dev.androiduse.tests/dev.androiduse.DeviceTests
+$testOutput
+if ($LASTEXITCODE -ne 0 -or ($testOutput -join "`n") -notmatch 'PASS: Android Keystore') { throw 'Device tests failed' }

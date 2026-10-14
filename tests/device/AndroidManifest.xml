@@ -1,0 +1,5 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="dev.androiduse.tests">
+ <uses-sdk android:minSdkVersion="30" android:targetSdkVersion="36"/>
+ <application android:label="Android Use Tests"/>
+ <instrumentation android:name="dev.androiduse.DeviceTests" android:targetPackage="dev.androiduse"/>
+</manifest>

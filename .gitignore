@@ -1,0 +1,14 @@
+/build/
+/artifacts/
+/bridge/
+*.keystore
+*.p12
+*.jks
+*.apk
+*.enc
+*.log
+__pycache__/
+*.pyc
+.env
+.env.*
+local.properties

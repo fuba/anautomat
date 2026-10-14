@@ -1,0 +1,90 @@
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_call:
+  workflow_dispatch:
+  schedule:
+    - cron: '23 3 * * 1'
+permissions:
+  contents: read
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  checks:
+    name: Build and security checks
+    runs-on: windows-2025
+    timeout-minutes: 40
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
+    defaults:
+      run:
+        shell: pwsh
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Verify checkout release cooldown before execution
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $headers = @{Authorization="Bearer $env:GH_TOKEN"; Accept='application/vnd.github+json'}
+          $release = Invoke-RestMethod 'https://api.github.com/repos/actions/checkout/releases/tags/v7.0.1' -Headers $headers
+          if ($release.draft -or $release.prerelease -or ([DateTimeOffset]::UtcNow - [DateTimeOffset]::Parse($release.published_at)).TotalDays -lt 7) { throw 'Checkout release is inside its seven-day cooldown.' }
+          $ref = (Invoke-RestMethod 'https://api.github.com/repos/actions/checkout/git/ref/tags/v7.0.1' -Headers $headers).object
+          while ($ref.type -eq 'tag') { $ref = (Invoke-RestMethod "https://api.github.com/repos/actions/checkout/git/tags/$($ref.sha)" -Headers $headers).object }
+          if ($ref.sha -ne '3d3c42e5aac5ba805825da76410c181273ba90b1') { throw 'Checkout tag no longer matches its reviewed commit.' }
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Use preinstalled Java 21
+        run: '"ANAUTOMAT_JAVA_HOME=$env:JAVA_HOME_21_X64" >> $env:GITHUB_ENV'
+      - name: Dependency cooldown and immutable pin checks
+        run: python scripts/ci-security.py verify
+      - name: Repository and locale policy
+        run: python scripts/ci-security.py policy
+      - name: Dependency advisory audit
+        run: python scripts/ci-security.py audit
+      - name: Security gate regression tests
+        run: python -m unittest discover -s tests -p 'test_*.py' -v
+      - name: Download checksum-verified security tools
+        run: python scripts/ci-security.py download --name gitleaks --name actionlint --name codeql
+      - name: Secret scan (complete Git history)
+        run: |
+          & build/tools/gitleaks/gitleaks.exe git --redact --exit-code 1 .
+          if ($LASTEXITCODE -ne 0) { throw 'Secret scanning failed' }
+      - name: Workflow security lint
+        run: |
+          & build/tools/actionlint/actionlint.exe -color -shellcheck='' -pyflakes=''
+          if ($LASTEXITCODE -ne 0) { throw 'Workflow lint failed' }
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2
+        with:
+          languages: java-kotlin,python,actions
+          build-mode: manual
+          queries: security-extended
+          tools: ${{ github.workspace }}/build/tools/codeql-bundle-win64.tar.gz
+      - name: JVM protocol and agent-state tests
+        run: ./scripts/test.ps1
+      - name: Build development APK
+        run: ./scripts/build.ps1
+      - name: Analyze CodeQL
+        uses: github/codeql-action/analyze@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2
+        with:
+          output: build/codeql-results
+          category: /language:java-python-actions
+      - name: Block high-severity CodeQL findings
+        run: python scripts/ci-security.py sarif
+      - name: Upload development APK and checksums
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: anautomat-development-apk
+          path: |
+            build/anautomat.apk
+            build/SHA256SUMS
+          if-no-files-found: error
+          retention-days: 14

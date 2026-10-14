@@ -1,0 +1,107 @@
+# anautomat
+
+An Android-only agent that executes goals by observing the screen and controlling apps with Android Accessibility. Sign in with ChatGPT, enter a goal, and keep control through a small floating button.
+
+[Download the latest APK](https://github.com/fuba/anautomat/releases/latest/download/anautomat.apk) · [Releases](https://github.com/fuba/anautomat/releases) · [Security policy](SECURITY.md)
+
+## Install
+
+1. Download **anautomat.apk** from GitHub Releases. Android 11 or later is required.
+2. Install the APK and open anautomat. Android may ask you to allow installation from the browser or file manager.
+3. Open **Accessibility settings** and enable anautomat. On devices that restrict accessibility for sideloaded apps, use **App info → Allow restricted settings**, then return to Accessibility settings.
+4. Choose **Continue with ChatGPT** and complete sign-in and consent in the system browser.
+5. Reload the available models if needed, enter a goal, and choose **Run goal**.
+
+Execution needs internet access and a ChatGPT account with access to the requested plan-inference scope and models. Sign-in happens on the Android device. No PC bridge, Codex CLI, API key, or adb connection is required after installation. This is an independent experimental project, not an OpenAI or Google product.
+
+Release APKs use a persistent release signing certificate. Development APKs use a separate debug certificate and cannot be updated in place to the release build. The application ID remains `dev.androiduse` for compatibility with the prototype's data and settings.
+
+## Controls
+
+- The translucent circular button stays above other apps while the accessibility service is connected. Drag it to reposition; tap it to open the menu in place.
+- Opening the menu keeps execution running. Use the pause icon to stop inference; the play icon resumes with the same goal and action history.
+- The microphone opens Android's speech recognizer. Review the recognized goal before running it. Speech service availability and audio processing depend on the installed provider.
+- **Open control center** returns to the app. Use the stop button there to end execution.
+- Both GOAL fields share a persistent draft and synchronize while typing, including voice input. An active run keeps its starting goal; edits affect the next new run.
+- The white orbiting point indicates execution. A small pause badge indicates pause. A read-only ticker near the bottom shows progress when the main app is hidden.
+
+The default step budget is **100** observations/inference requests. Change **Step limit** in the app. On exhaustion, **Continue** appears in the app and menu. It grants another configured budget while preserving the active goal, action history, cumulative step number, token usage and log file. Execution/continuation state is held in memory and is lost when the service or process stops. Each inference has a 150-second timeout.
+
+The overlay is hidden briefly during screen capture and input so it does not intercept the target app. Android can suppress accessibility overlays on protected system screens; visibility is not guaranteed on every surface. Already dispatched gestures may finish after pause or stop. Late inference results from a cancelled generation are ignored.
+
+## Language
+
+English is the default interface language; Japanese translations are included. Android 13 and later expose **App language** in the control center. Earlier versions follow the system locale. Voice-recognition language and planner reasons follow the app locale. Existing goals and historical logs retain their original language.
+
+Repository documentation, comments, workflows and release notes are written in English. Japanese is confined to translation resources and escaped localization test data.
+
+## Logs
+
+The LOG text area supports scrolling, selection and copying. It uses one line break per entry. Auto-scroll follows new entries only when you are already at the bottom. The on-screen history retains up to 500 entries or 150,000 JSON characters and is encrypted in app-private storage.
+
+Choose **Save folder** to enable automatic UTF-8 text export using Android's Storage Access Framework. The selection persists across restarts. Each new goal gets a name such as:
+
+```
+2026-10-15_16-55-00-123_Open Settings.txt
+```
+
+Names use the start time in Japan Standard Time, including milliseconds, followed by the first sentence of the goal shortened to 36 Unicode characters. Forbidden filename characters are removed. This title is a deterministic excerpt, without an additional model call.
+
+New entries, pause, continuation and completion update the same file in the background. The 500-entry UI limit does not truncate the run's exported history. Selecting a folder after a run exports the retained last run; before any run using the new logger, the existing UI history is exported as **Log history**. **Auto-save off** stops future updates. **Clear log** clears the UI history and leaves existing exports intact. Save errors appear in LOG.
+
+Local history and the latest-run recovery copy are encrypted with Android Keystore. Exported files are ordinary text in the folder you choose and may contain goal text and public reasoning summaries. No authentication tokens, raw API responses or private chain-of-thought are logged.
+
+## Data and supported operations
+
+During execution, screenshots, visible UI text, installed-app labels, the goal and action history are sent directly to the official OpenAI Responses endpoint. OAuth tokens are encrypted, backed up neither by Android nor this repository, and refreshed when required.
+
+Supported actions: launch app, tap, long press, swipe, replace focused editable text, Back, Home, Recents, notifications, quick settings, wait and completion/block reporting. The planner re-observes the screen after each action.
+
+Protected screens, unlocking, biometric authentication, root-only operations, arbitrary key injection, multitouch and some custom input fields are unsupported. Sensitive actions require explicit goal authorization in the model prompt; this does not constitute a complete approval system. The app has not been prepared for Play Store distribution.
+
+Completed responses contribute to displayed goal token usage. A numeric rate-limit remaining-tokens header is shown only when the API provides it. This is not the remaining allowance of the entire ChatGPT plan. Cancelled or failed requests without a completed usage event cannot be counted.
+
+## Build and test
+
+The app is Java and native Android resources, with no Gradle or bundled third-party dependencies. The supplied scripts require Windows, PowerShell 7, Python 3.10+, a JDK 17+ and Android SDK **platform 36 / build-tools 36.0.0**. CI uses the preinstalled Java 21 and Android SDK from `windows-2025`.
+
+Set `ANDROID_HOME` and `JAVA_HOME` when the tools are not in their standard Android Studio locations. `ANAUTOMAT_JAVA_HOME` overrides JDK selection; `ANAUTOMAT_PYTHON` overrides the Python executable.
+
+```powershell
+./scripts/test.ps1
+python -m unittest discover -s tests -p 'test_*.py' -v
+./scripts/build.ps1
+./scripts/start-emulator.ps1
+./scripts/install.ps1 -Serial emulator-5556
+./scripts/test-device.ps1 -Serial emulator-5556
+```
+
+`build/anautomat.apk` is the development APK. The dedicated emulator is named `AndroidUse_Test` and uses port 5556. Install the SDK's `system-images;android-36.1;google_apis_playstore;x86_64` package before creating it. Device tests check Keystore encryption/tamper rejection, shared-goal synchronization and English/Japanese resources; if an export folder is configured, they also check actual SAF file writes and same-file updates using a separate temporary test file.
+
+Tests download only the locked, checksum-verified test JSON library after its cooldown. Builds do not install or upgrade SDK packages. Do not use `uiautomator dump` during an active goal: UI Automation can suppress the accessibility service. Screen capture is safer for observing a live run.
+
+## CI and releases
+
+Main pushes, pull requests and a weekly schedule run the build, JVM tests, security-gate regression tests, dependency age/integrity checks, GitHub advisory audit, Gitleaks secret scanning, actionlint, Android manifest policy, translation parity and CodeQL for Java/Python/Actions. High-severity CodeQL findings fail the job. Development APKs are available as workflow artifacts.
+
+CI downloads have a **seven-day cooldown**, exact versions and SHA-256 checksums. Actions are pinned to full commits and their release age is checked before execution. The CodeQL bundle is explicitly locked; the build never requests an unpinned latest SDK/JDK. See [SECURITY.md](SECURITY.md) for the trusted runner-image boundary and failure behavior.
+
+Push a semantic version tag such as `v0.1.0` to trigger the release workflow. Security checks run first. Only then does it build and sign `anautomat.apk`, attest provenance and publish an APK plus `SHA256SUMS` to GitHub Releases. Signing requires these repository secrets:
+
+- `ANDROID_KEYSTORE_BASE64`: base64-encoded PKCS12 release keystore.
+- `ANDROID_KEYSTORE_PASSWORD`: the store/key password.
+- `ANDROID_KEY_ALIAS`: the signing alias.
+
+Keep a secure backup of the signing key. Losing it prevents in-place updates to installed release APKs. Release keys and device data are excluded from Git.
+
+Verify a downloaded APK's provenance with GitHub CLI:
+
+```sh
+gh attestation verify anautomat.apk --repo fuba/anautomat
+```
+
+The monochrome identity and original SVG mark are documented in [design/README.md](design/README.md). Run `scripts/sync-icon.ps1` after editing the mark; the build also runs it automatically.
+
+## License
+
+[MIT](LICENSE).

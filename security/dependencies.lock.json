@@ -1,0 +1,69 @@
+{
+  "cooldown_days": 7,
+  "actions": [
+    {
+      "version": "v7.0.1",
+      "repository": "actions/checkout",
+      "sha": "3d3c42e5aac5ba805825da76410c181273ba90b1"
+    },
+    {
+      "version": "v7.0.1",
+      "repository": "actions/upload-artifact",
+      "sha": "043fb46d1a93c77aae656e7c1c64a875d1fc6a0a"
+    },
+    {
+      "version": "v4.38.2",
+      "repository": "github/codeql-action",
+      "sha": "2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2"
+    },
+    {
+      "version": "v4.2.2",
+      "repository": "actions/attest-build-provenance",
+      "sha": "4d101475d8b20a2381f78447822ac1eab6504dd8"
+    },
+    {
+      "version": "v4.2.1",
+      "repository": "actions/attest",
+      "sha": "508db95dd578ae2727ebd6217d5ba78e4fbda05d"
+    }
+  ],
+  "downloads": [
+    {
+      "version": "v8.30.1",
+      "sha256": "d29144deff3a68aa93ced33dddf84b7fdc26070add4aa0f4513094c8332afc4e",
+      "url": "https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_windows_x64.zip",
+      "name": "gitleaks",
+      "asset": "gitleaks_8.30.1_windows_x64.zip",
+      "repository": "gitleaks/gitleaks",
+      "published_at": "2026-03-21T02:17:58Z"
+    },
+    {
+      "version": "v1.7.12",
+      "sha256": "6e7241b51e6817ea6a047693d8e6fed13b31819c9a0dd6c5a726e1592d22f6e9",
+      "url": "https://github.com/rhysd/actionlint/releases/download/v1.7.12/actionlint_1.7.12_windows_amd64.zip",
+      "name": "actionlint",
+      "asset": "actionlint_1.7.12_windows_amd64.zip",
+      "repository": "rhysd/actionlint",
+      "published_at": "2026-03-30T17:49:21Z"
+    },
+    {
+      "version": "codeql-bundle-v2.27.1",
+      "sha256": "721209b52b74d0cf742c701eeb452a70f570f236c75dda6087bd4ad2a6f97202",
+      "url": "https://github.com/github/codeql-action/releases/download/codeql-bundle-v2.27.1/codeql-bundle-win64.tar.gz",
+      "name": "codeql",
+      "asset": "codeql-bundle-win64.tar.gz",
+      "repository": "github/codeql-action",
+      "published_at": "2026-09-22T17:10:11Z"
+    },
+    {
+      "package": "org.json:json",
+      "published_at": "Fri, 14 Aug 2026 16:19:18 GMT",
+      "name": "json",
+      "sha256": "7dd2de1533e766e2b6c07d8194da85145ad313a167a4760050f5c9b6839604fe",
+      "url": "https://repo.maven.apache.org/maven2/org/json/json/20260814/json-20260814.jar",
+      "ecosystem": "maven",
+      "version": "20260814",
+      "asset": "json.jar"
+    }
+  ]
+}
