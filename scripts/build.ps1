@@ -1,4 +1,4 @@
-param([switch]$Release,[string]$Version="0.1.2",[int]$VersionCode=1002)
+param([switch]$Release,[string]$Version="0.1.3",[int]$VersionCode=1003)
 $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot -Parent
 . "$PSScriptRoot/environment.ps1"
@@ -26,6 +26,8 @@ if ($Release) {
  if (!(Test-Path build\debug.keystore)) { Run "$jdk\bin\keytool.exe" @('-genkeypair','-keystore','build/debug.keystore','-storepass','android','-keypass','android','-alias','androiddebugkey','-dname','CN=anautomat Debug','-keyalg','RSA','-validity','10000') }
  Run "$bt\apksigner.bat" @('sign','--ks','build/debug.keystore','--ks-pass','pass:android','--out','build/anautomat.apk','build/aligned.apk')
 }
+$badging = & "$bt\aapt2.exe" dump badging build/anautomat.apk
+if ($LASTEXITCODE -ne 0 -or ($badging -join "`n") -notmatch ("versionCode='"+[regex]::Escape("$VersionCode")+"' versionName='"+[regex]::Escape($Version)+"'")) { throw 'Built APK version does not match requested release metadata.' }
 Run "$bt\apksigner.bat" @('verify','--verbose','--print-certs','build/anautomat.apk')
 (Get-FileHash build/anautomat.apk -Algorithm SHA256).Hash.ToLower()+'  anautomat.apk' | Set-Content build/SHA256SUMS -Encoding ascii
 Write-Output "APK: $root\build\anautomat.apk"

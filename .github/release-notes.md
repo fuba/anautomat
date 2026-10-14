@@ -1,3 +1,5 @@
+Fix APK version stamping and validate the requested version after every build. Version 0.1.3 correctly reports versionCode 1003; the earlier 0.1.2 artifact retained the old manifest version.
+
 This release adds native Android input-method actions for terminals and other custom input fields on Android 13 or later. The regular editable-field replacement action remains available on Android 11+.
 
 The demo shows one goal installing Python in Termux, generating a Mandelbrot explorer, serving it on localhost, and verifying zoom/reset in Chrome. See the README for the exact goal, generated source, edited video and full recording.
