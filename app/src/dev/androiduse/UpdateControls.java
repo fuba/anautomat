@@ -10,7 +10,7 @@ final class UpdateControls extends LinearLayout {
   Ui.label(this,I18n.text(activity,"updates"));
   String version="";try{version=updates.installed().versionName;}catch(Exception ignored){}
   addView(Ui.text(activity,I18n.text(activity,"update_installed",version),12,Ui.MUTED,false));Ui.gap(this,8);
-  Switch automatic=new Switch(activity);automatic.setText(I18n.text(activity,"update_automatic"));automatic.setTextColor(Ui.TEXT);automatic.setChecked(updates.automatic());automatic.setOnCheckedChangeListener((button,value)->{updates.automatic(value);if(value)permission(activity);});addView(automatic);Ui.gap(this,10);
+  Switch automatic=new Switch(activity);automatic.setText(I18n.text(activity,"update_automatic"));automatic.setTextColor(Ui.TEXT);automatic.setThumbTintList(android.content.res.ColorStateList.valueOf(Ui.SURFACE));automatic.setTrackTintList(new android.content.res.ColorStateList(new int[][]{new int[]{android.R.attr.state_checked},new int[]{}},new int[]{Ui.TEXT,Ui.LINE}));automatic.setChecked(updates.automatic());automatic.setOnCheckedChangeListener((button,value)->{updates.automatic(value);if(value)permission(activity);});addView(automatic);Ui.gap(this,10);
   status=Ui.text(activity,"",13,Ui.TEXT,false);addView(status);Ui.gap(this,12);
   check=Ui.button(activity,I18n.text(activity,"update_check"),false,()->{permission(activity);updates.check(true,null);});
   action=Ui.button(activity,"",true,()->{if(updates.ready)updates.install(activity);else updates.download();});
