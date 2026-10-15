@@ -32,15 +32,15 @@ final class ChatGptAuth {
   new Thread(()->awaitCallback(socket,attempt,state,nonce,verifier,redirect,previous),"ChatGPT-sign-in").start();return url;
  }
  private void awaitCallback(ServerSocket server,int attempt,String state,String nonce,String verifier,String redirect,JSONObject previous){
-  long deadline=System.currentTimeMillis()+10*60*1000;
+  long deadline=System.currentTimeMillis()+10*60*1000;Socket accepted=null;
   try{
    Map<String,String> callback=null;
-   while(System.currentTimeMillis()<deadline&&attempt==epoch){try(Socket client=server.accept()){
+   while(System.currentTimeMillis()<deadline&&attempt==epoch){Socket client=null;try{client=server.accept();
     client.setSoTimeout(5000);BufferedReader in=new BufferedReader(new InputStreamReader(client.getInputStream(),"US-ASCII"));String line=in.readLine();if(line==null||line.length()>16000){respond(client,400,"Invalid request");continue;}String[] request=line.split(" ");
     if(request.length!=3||!request[0].equals("GET")){respond(client,400,"Invalid request");continue;}
     try{callback=Protocol.callback(request[1],state,previous==null?null:previous.getString("client_id"));}catch(Exception e){respond(client,400,"Sign-in could not be verified. Return to anautomat.");if(e.getMessage().contains("denied"))throw e;continue;}
-    respond(client,200,"Sign-in received. Return to anautomat to check the connection.");break;
-   }catch(SocketTimeoutException ignored){}}
+    accepted=client;client=null;break;
+   }catch(SocketTimeoutException ignored){}finally{if(client!=null)try{client.close();}catch(IOException ignored){}}}
    if(callback==null)throw new IOException(I18n.text(context,"sign_in_timeout"));
    server.close();synchronized(this){if(attempt!=epoch)return;status=I18n.text(context,"verifying_auth");}
    Map<String,String> form=new LinkedHashMap<>();form.put("grant_type","authorization_code");form.put("client_id",callback.get("client_id"));form.put("code",callback.get("code"));form.put("code_verifier",verifier);form.put("redirect_uri",redirect);form.put("resource",Protocol.RESOURCE);
@@ -52,11 +52,14 @@ final class ChatGptAuth {
    if(!"Bearer".equalsIgnoreCase(tokens.getString("token_type"))||tokens.getString("access_token").isEmpty())throw new IOException("Invalid token response");
    tokens.put("client_id",callback.get("client_id"));tokens.put("subject",identity.getString("sub"));tokens.put("email",identity.optString("email",I18n.text(context,"connected")));tokens.put("expires_at",System.currentTimeMillis()/1000+tokens.getLong("expires_in"));
    synchronized(this){if(attempt!=epoch)return;store.write(tokens);account=tokens;status="ChatGPT: "+tokens.getString("email");}
+   // Only verified and persisted credentials permit the browser-to-app handoff.
+   if(accepted!=null){try{respond(accepted,200,I18n.text(context,"sign_in_complete"));}catch(IOException ignored){}try{accepted.close();}catch(IOException ignored){}accepted=null;}
+   new android.os.Handler(android.os.Looper.getMainLooper()).post(()->{synchronized(ChatGptAuth.this){if(attempt!=epoch)return;}try{context.startActivity(new Intent(context,MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK|Intent.FLAG_ACTIVITY_CLEAR_TOP|Intent.FLAG_ACTIVITY_SINGLE_TOP));}catch(RuntimeException ignored){/* The browser return link remains available. */}});
    try{loadModels();}catch(Exception e){synchronized(this){if(attempt==epoch)status=I18n.text(context,"models_failed");}}
   }catch(Exception e){synchronized(this){if(attempt==epoch)status=I18n.text(context,"sign_in_failed")+safeError(e);}}
-  finally{try{server.close();}catch(IOException ignored){}synchronized(this){if(attempt==epoch){signingIn=false;listener=null;context.stopService(new Intent(context,SignInService.class));}}}
+  finally{if(accepted!=null)try{respond(accepted,400,I18n.text(context,"sign_in_return_failed"));accepted.close();}catch(IOException ignored){try{accepted.close();}catch(IOException ignoredAgain){}}try{server.close();}catch(IOException ignored){}synchronized(this){if(attempt==epoch){signingIn=false;listener=null;context.stopService(new Intent(context,SignInService.class));}}}
  }
- private static void respond(Socket socket,int code,String message)throws IOException{byte[] body=("<!doctype html><meta name=viewport content=width=device-width><title>anautomat</title><h2>anautomat</h2><p>"+message+"</p>").getBytes("UTF-8");OutputStream out=socket.getOutputStream();out.write(("HTTP/1.1 "+code+"\r\nContent-Type: text/html; charset=utf-8\r\nContent-Length: "+body.length+"\r\nCache-Control: no-store\r\nConnection: close\r\n\r\n").getBytes("US-ASCII"));out.write(body);out.flush();}
+ private void respond(Socket socket,int code,String message)throws IOException{byte[] body=AuthReturnPage.html(code==200,message,I18n.text(context,"return_to_app")).getBytes("UTF-8");OutputStream out=socket.getOutputStream();out.write(("HTTP/1.1 "+code+"\r\nContent-Type: text/html; charset=utf-8\r\nContent-Length: "+body.length+"\r\nCache-Control: no-store\r\nReferrer-Policy: no-referrer\r\nX-Content-Type-Options: nosniff\r\nContent-Security-Policy: default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'\r\nConnection: close\r\n\r\n").getBytes("US-ASCII"));out.write(body);out.flush();}
  String accessToken()throws Exception{synchronized(refreshLock){JSONObject saved;int current;synchronized(this){if(!connected())throw new IOException(I18n.text(context,"please_sign_in"));saved=new JSONObject(account.toString());current=epoch;}long now=System.currentTimeMillis()/1000;
   if(saved.getLong("expires_at")<=now+60){if(saved.optString("refresh_token").isEmpty())throw new IOException(I18n.text(context,"sign_in_again"));Map<String,String> form=new LinkedHashMap<>();form.put("grant_type","refresh_token");form.put("client_id",saved.getString("client_id"));form.put("refresh_token",saved.getString("refresh_token"));form.put("resource",Protocol.RESOURCE);JSONObject refreshed=OpenAiHttp.json(Protocol.ISSUER+"/api/accounts/oauth/token","POST",null,Protocol.form(form),"application/x-www-form-urlencoded");if(!"Bearer".equalsIgnoreCase(refreshed.getString("token_type"))||!Protocol.hasPlanScope(refreshed)||refreshed.getString("refresh_token").isEmpty())throw new IOException("Refresh did not return required credentials");synchronized(this){if(current!=epoch||!connected())throw new IOException(I18n.text(context,"auth_changed"));JSONObject next=new JSONObject(account.toString());for(String key:new String[]{"access_token","refresh_token","scope","expires_in","earliest_refresh_at"})if(refreshed.has(key))next.put(key,refreshed.get(key));next.put("expires_at",System.currentTimeMillis()/1000+refreshed.getLong("expires_in"));store.write(next);account=next;saved=next;}}
   synchronized(this){if(current!=epoch||!connected())throw new IOException(I18n.text(context,"auth_changed"));}return saved.getString("access_token");}

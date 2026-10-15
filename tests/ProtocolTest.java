@@ -45,6 +45,11 @@ public final class ProtocolTest {
   check(Protocol.validateAction(new JSONObject().put("type","press_enter").put("reason","submit"),100,100).getString("type").equals("press_enter"));
   reject(()->Protocol.validateAction(new JSONObject().put("type","input_text").put("reason","bad").put("text",JSONObject.NULL),100,100));
   reject(()->Protocol.validateAction(new JSONObject().put("type","input_text").put("reason","too long").put("text","x".repeat(10001)),100,100));
+  String returnPage=AuthReturnPage.html(true,"<script>alert('x')</script>","Open & return");
+  check(returnPage.contains(AuthReturnPage.INTENT)&&returnPage.contains("http-equiv=refresh"));
+  check(!returnPage.contains("<script>")&&returnPage.contains("&lt;script&gt;")&&returnPage.contains("Open &amp; return"));
+  check(!AuthReturnPage.html(false,"Failed","Return").contains("intent://"));
+  check(!AuthReturnPage.INTENT.contains("token")&&!AuthReturnPage.INTENT.contains("code="));
   UsageMeter meter=new UsageMeter();String completed="data: {\"type\":\"response.completed\",\"response\":{\"status\":\"completed\",\"usage\":{\"input_tokens\":100,\"output_tokens\":20,\"total_tokens\":120}}}\n\n";
   Protocol.readResponse(new StringReader(delta+completed),meter::usage);Protocol.readResponse(new StringReader(delta+completed),meter::usage);check(meter.summary().contains("240 tokens"));
   meter.headers("1234");check(meter.summary().contains("Rate-limit tokens remaining: 1234"));meter.headers(null);check(meter.summary().equals("Goal usage: 240 tokens"));

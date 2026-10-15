@@ -97,4 +97,7 @@
  <string name="service_description">Observe the screen and execute your goals. Screenshots and visible text are sent directly to OpenAI only while a goal is running.</string>
     <string name="input_method_requires_13">Terminal input requires Android 13 or later.</string>
     <string name="input_connection_missing">Tap an input field and show its keyboard first.</string>
+ <string name="sign_in_complete">Signed in. Returning to anautomat.</string>
+ <string name="return_to_app">Open anautomat</string>
+ <string name="sign_in_return_failed">Sign-in could not be completed. Return to anautomat for details.</string>
 </resources>

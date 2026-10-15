@@ -17,7 +17,7 @@ The video shows a real emulator run. The 54-second edit labels accelerated secti
 1. Download **anautomat.apk** from GitHub Releases. Android 11 or later is required.
 2. Install the APK and open anautomat. Android may ask you to allow installation from the browser or file manager.
 3. Open **Accessibility settings** and enable anautomat. On devices that restrict accessibility for sideloaded apps, use **App info → Allow restricted settings**, then return to Accessibility settings.
-4. Choose **Continue with ChatGPT** and complete sign-in and consent in the system browser.
+4. Choose **Continue with ChatGPT** and complete sign-in and consent in the system browser. After the app verifies and saves the credentials, it returns to the control center. If your device blocks the automatic return, tap **Open anautomat** on the completion page.
 5. Reload the available models if needed, enter a goal, and choose **Run goal**.
 
 Execution needs internet access and a ChatGPT account with access to the requested plan-inference scope and models. Sign-in happens on the Android device. No PC bridge, Codex CLI, API key, or adb connection is required after installation. This is an independent experimental project, not an OpenAI or Google product.

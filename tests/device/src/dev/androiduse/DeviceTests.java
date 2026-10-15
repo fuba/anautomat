@@ -15,6 +15,11 @@ public final class DeviceTests extends Instrumentation {
   bytes[bytes.length-1]^=1;try(FileOutputStream out=new FileOutputStream(file)){out.write(bytes);}boolean rejected=false;try{store.read();}catch(Exception expected){rejected=true;}if(!rejected)throw new AssertionError("Tampered encrypted record accepted");
   store.clear();if(store.read()!=null)throw new AssertionError("Credentials were not deleted");
   for(String language:new String[]{"en","ja"}){android.content.res.Configuration config=new android.content.res.Configuration(getTargetContext().getResources().getConfiguration());config.setLocales(new android.os.LocaleList(java.util.Locale.forLanguageTag(language)));android.content.Context localized=getTargetContext().createConfigurationContext(config);String expected=language.equals("en")?"Run goal →":"Goal \u3092\u5b9f\u884c →";if(!I18n.text(localized,"run_goal").equals(expected))throw new AssertionError("Locale selection failed: "+language);AgentBubble bubble=new AgentBubble(localized);bubble.state(true,false);if(!bubble.getContentDescription().toString().equals(I18n.text(localized,"menu")+" • "+I18n.text(localized,"running")))throw new AssertionError("Floating accessibility label locale failed");if(!I18n.text(localized,"limit_message",100).contains("100"))throw new AssertionError("Localized limit placeholder failed");}
+  android.content.Intent authReturn=android.content.Intent.parseUri(AuthReturnPage.INTENT,android.content.Intent.URI_INTENT_SCHEME).addCategory(android.content.Intent.CATEGORY_BROWSABLE);
+  android.content.pm.ResolveInfo destination=getTargetContext().getPackageManager().resolveActivity(authReturn,android.content.pm.PackageManager.MATCH_DEFAULT_ONLY);
+  if(destination==null||!destination.activityInfo.name.equals("dev.androiduse.MainActivity")||!"dev.androiduse".equals(authReturn.getPackage()))throw new AssertionError("Browser return does not resolve to the app");
+  android.content.Intent wrongReturn=new android.content.Intent(android.content.Intent.ACTION_VIEW,android.net.Uri.parse("anautomat://auth/other")).setPackage("dev.androiduse").addCategory(android.content.Intent.CATEGORY_BROWSABLE);
+  if(getTargetContext().getPackageManager().resolveActivity(wrongReturn,android.content.pm.PackageManager.MATCH_DEFAULT_ONLY)!=null)throw new AssertionError("Unexpected browser return path accepted");
   android.app.Activity activity=startActivitySync(new android.content.Intent(getTargetContext(),MainActivity.class).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK));
   runOnMainSync(()->{
    String saved=GoalSettings.goal(getTargetContext());android.widget.LinearLayout holder=new android.widget.LinearLayout(activity);
@@ -35,6 +40,6 @@ public final class DeviceTests extends Instrumentation {
     try(InputStream input=getTargetContext().getContentResolver().openInputStream(created)){if(!new String(input.readAllBytes(),java.nio.charset.StandardCharsets.UTF_8).endsWith("Finished\n"))throw new AssertionError("Final log missing");}
    }finally{archive.writer.shutdown();if(created!=null)android.provider.DocumentsContract.deleteDocument(getTargetContext().getContentResolver(),created);new SecureStore(getTargetContext(),"test-archive.enc").clear();}
   }
-  result.putString("stream","PASS: Android Keystore encryption, restart read, tamper rejection, deletion; live bidirectional GOAL sync and default 100 steps; English and Japanese resources; SAF log export updates one UTF-8 file\n");finish(-1,result);
+  result.putString("stream","PASS: Android Keystore encryption, restart read, tamper rejection, deletion; live bidirectional GOAL sync and default 100 steps; English and Japanese resources; browser return routing; SAF log export updates one UTF-8 file\n");finish(-1,result);
  }catch(Throwable e){result.putString("stream","FAIL: "+e.getClass().getSimpleName()+": "+e.getMessage()+"\n");finish(1,result);}finally{store.clear();}}
 }

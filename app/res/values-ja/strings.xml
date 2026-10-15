@@ -97,4 +97,7 @@
  <string name="service_description">画面を観察して Goal を実行します。実行中のみスクリーンショットと表示テキストを OpenAI に直接送信します。</string>
     <string name="input_method_requires_13">ターミナルへの入力には Android 13 以降が必要です。</string>
     <string name="input_connection_missing">入力欄をタップしてキーボードを表示してください。</string>
+ <string name="sign_in_complete">認証が完了しました。anautomat に戻ります。</string>
+ <string name="return_to_app">anautomat を開く</string>
+ <string name="sign_in_return_failed">認証を完了できませんでした。anautomat で詳細を確認してください。</string>
 </resources>
