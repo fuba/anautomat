@@ -17,6 +17,7 @@ public final class AutomationDeviceTests extends Instrumentation {
   if(!success&&(result[0]!=null||error[0].isEmpty()))throw new AssertionError("Unsafe program succeeded");return result[0];
  }
  public void onStart(){Bundle result=new Bundle();int code=-1;try{
+  android.view.accessibility.AccessibilityNodeInfo guard=android.view.accessibility.AccessibilityNodeInfo.obtain();guard.setVisibleToUser(true);if(AgentService.visibleText(guard,"null",0,new int[1]))throw new AssertionError("Missing text satisfied a literal guard");guard.setText("null");if(!AgentService.visibleText(guard,"null",0,new int[1]))throw new AssertionError("Visible literal text guard failed");guard.setVisibleToUser(false);if(AgentService.visibleText(guard,"null",0,new int[1]))throw new AssertionError("Invisible text satisfied a guard");
   android.content.pm.ServiceInfo info=getTargetContext().getPackageManager().getServiceInfo(new ComponentName(getTargetContext(),SandboxService.class),0);
   if(info.exported||(info.flags&android.content.pm.ServiceInfo.FLAG_ISOLATED_PROCESS)==0)throw new AssertionError("Service is not private and isolated");
   JSONObject arithmetic=execute("ctx.state.put(\"n\",ctx.state.getInt(\"n\")+1);ctx.log(\"sum\");return new JSONObject().put(\"sum\",ctx.input.getJSONArray(\"values\").getInt(0)+8);","{\"n\":4}",true);
