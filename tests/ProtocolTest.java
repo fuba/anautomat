@@ -50,8 +50,18 @@ public final class ProtocolTest {
   check(!returnPage.contains("<script>")&&returnPage.contains("&lt;script&gt;")&&returnPage.contains("Open &amp; return"));
   check(!AuthReturnPage.html(false,"Failed","Return").contains("intent://"));
   check(!AuthReturnPage.INTENT.contains("token")&&!AuthReturnPage.INTENT.contains("code="));
+  InferenceRetry retry=new InferenceRetry();Exception transientFailure=new Protocol.ResponseFailure("ChatGPT response failed",true);
+  long firstDelay=retry.nextDelay(transientFailure),secondDelay=retry.nextDelay(transientFailure);check(firstDelay>=2000&&firstDelay<=2500);check(secondDelay>=4000&&secondDelay<=4500);check(retry.nextDelay(transientFailure)==-1);retry.reset();check(retry.attempts()==0&&retry.nextDelay(transientFailure)>=2000);
+  check(!InferenceRetry.retryable(new OpenAiHttp.Failure(401)));check(!InferenceRetry.retryable(new OpenAiHttp.Failure(403)));check(!InferenceRetry.retryable(new OpenAiHttp.Failure(400)));check(!InferenceRetry.retryable(new OpenAiHttp.Failure(429,"insufficient_quota",0)));check(InferenceRetry.retryable(new OpenAiHttp.Failure(503)));check(InferenceRetry.retryable(new java.net.SocketTimeoutException()));check(!InferenceRetry.retryable(new javax.net.ssl.SSLException("certificate")));check(!InferenceRetry.retryable(new IOException("Invalid response")));
+  check(new InferenceRetry().nextDelay(new OpenAiHttp.Failure(429,"rate_limit_exceeded",12000))==12000);check(new InferenceRetry().nextDelay(new OpenAiHttp.Failure(429,"rate_limit_exceeded",86400001))==-1);
+  check(InferenceRetry.retryAfter("12",0)==12000);check(InferenceRetry.retryAfter("Wed, 01 Jan 2025 00:00:10 GMT",1735689600000L)==10000);check(InferenceRetry.retryAfter("bad",0)==0);
+  try{Protocol.readResponse(new StringReader("data: {\"type\":\"response.failed\",\"response\":{\"error\":{\"code\":\"server_error\"}}}\n\n"));throw new AssertionError("Failed response accepted");}catch(Protocol.ResponseFailure e){check(e.retryable);}
+  try{Protocol.readResponse(new StringReader("data: {\"type\":\"error\",\"code\":\"insufficient_quota\"}\n\n"));throw new AssertionError("Quota error accepted");}catch(Protocol.ResponseFailure e){check(!e.retryable);}
+  try{Protocol.readResponse(new StringReader("data: {\"type\":\"response.incomplete\"}\n\n"));throw new AssertionError("Incomplete response accepted");}catch(Protocol.ResponseFailure e){check(!e.retryable);}
+  try{Protocol.readResponse(new StringReader(delta));throw new AssertionError("Partial action accepted");}catch(Protocol.ResponseFailure e){check(e.retryable);}
   UsageMeter meter=new UsageMeter();String completed="data: {\"type\":\"response.completed\",\"response\":{\"status\":\"completed\",\"usage\":{\"input_tokens\":100,\"output_tokens\":20,\"total_tokens\":120}}}\n\n";
   Protocol.readResponse(new StringReader(delta+completed),meter::usage);Protocol.readResponse(new StringReader(delta+completed),meter::usage);check(meter.summary().contains("240 tokens"));
+  UsageMeter failedMeter=new UsageMeter();try{Protocol.readResponse(new StringReader("data: {\"type\":\"response.failed\",\"response\":{\"usage\":{\"total_tokens\":13}}}\n\n"),failedMeter::usage);}catch(Protocol.ResponseFailure expected){}check(failedMeter.summary().contains("13 tokens"));
   meter.headers("1234");check(meter.summary().contains("Rate-limit tokens remaining: 1234"));meter.headers(null);check(meter.summary().equals("Goal usage: 240 tokens"));
   meter.headers("not-a-number");check(meter.summary().equals("Goal usage: 240 tokens"));
   reject(()->Protocol.readResponse(new StringReader(delta),meter::usage));check(meter.summary().contains("240 tokens"));

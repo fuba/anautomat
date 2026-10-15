@@ -1,5 +1,5 @@
-Return to anautomat after successful ChatGPT sign-in. The phone-local callback now verifies and saves credentials before returning a completion page and bringing the control center forward. A browser link provides a manual return if Android or the browser blocks automatic navigation. Authorization codes and tokens stay out of the return link.
+Retry temporary ChatGPT response failures without losing the active goal. Inference gets up to two automatic retries with exponential backoff, jitter and Retry-After support. Each retry observes the current screen; partial actions are discarded and device actions are never replayed by this mechanism.
 
-Includes English/Japanese completion pages and checks for safe browser return routing. Download **anautomat.apk** and update the installed release in place; existing sign-in data and goals are retained.
+When retries are exhausted, or an error needs user action, the goal pauses. Press the play icon in the control center or floating menu to resume with the same goal, action history, token meter and remaining step budget. Pause cancels pending retries. Resume is available while the current accessibility-service session stays alive.
 
-The APK uses the persistent release signing key. SHA256SUMS and GitHub build provenance are provided. Release builds run the dependency cooldown, advisory, secret, workflow and CodeQL checks before publication.
+Includes regression checks for bounded retries, error classification, server delays, manual resume and cancellation of stale callbacks. The APK uses the existing release signing key, so it can update the installed release in place.

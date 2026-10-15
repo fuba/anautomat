@@ -27,13 +27,17 @@ Release APKs use a persistent release signing certificate. Development APKs use 
 ## Controls
 
 - The translucent circular button stays above other apps while the accessibility service is connected. Drag it to reposition; tap it to open the menu in place.
-- Opening the menu keeps execution running. Use the pause icon to stop inference; the play icon resumes with the same goal and action history.
+- Opening the menu keeps execution running. Both the control center and floating menu have pause/play icons. Pause stops inference; play resumes the same goal, action history, token meter and step budget.
 - The microphone opens Android's speech recognizer. Review the recognized goal before running it. Speech service availability and audio processing depend on the installed provider.
 - **Open control center** returns to the app. Use the stop button there to end execution.
 - Both GOAL fields share a persistent draft and synchronize while typing, including voice input. An active run keeps its starting goal; edits affect the next new run.
 - The white orbiting point indicates execution. A small pause badge indicates pause. A read-only ticker near the bottom shows progress when the main app is hidden.
 
 The default step budget is **100** observations/inference requests. Change **Step limit** in the app. On exhaustion, **Continue** appears in the app and menu. It grants another configured budget while preserving the active goal, action history, cumulative step number, token usage and log file. Execution/continuation state is held in memory and is lost when the service or process stops. Each inference has a 150-second timeout.
+
+Temporary response failures, interrupted streams, network timeouts and eligible HTTP failures trigger at most two automatic retries, with approximately 2- and 4-second backoff plus jitter. Valid `Retry-After` delays are honored; delays longer than a day pause instead. Authentication, permission, quota and invalid-response errors pause immediately. After retries are exhausted, press the play icon to resume manually. Each retry captures a fresh screen and counts toward the configured step budget. Only inference is retried; partially streamed actions are discarded and device actions are never replayed by the retry mechanism. The [OpenAI error guide](https://developers.openai.com/api/docs/guides/error-codes) describes the backoff and rate-limit behavior used here.
+
+Resume preserves an in-memory session while the accessibility service stays alive. Ending the session, force-stopping the app or restarting the service does not retain a resumable execution; saved goals and exported logs remain available.
 
 The overlay is hidden briefly during screen capture and input so it does not intercept the target app. Android can suppress accessibility overlays on protected system screens; visibility is not guaranteed on every surface. Already dispatched gestures may finish after pause or stop. Late inference results from a cancelled generation are ignored.
 

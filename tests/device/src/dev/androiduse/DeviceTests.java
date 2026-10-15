@@ -30,6 +30,16 @@ public final class DeviceTests extends Instrumentation {
     if(GoalSettings.limit(getTargetContext())!=100)throw new AssertionError("Default step limit is not 100");
    }finally{GoalSettings.goal(getTargetContext(),saved);if(holder.getParent()!=null)((android.view.ViewGroup)holder.getParent()).removeView(holder);}
   });
+  final RetryService[] retryService=new RetryService[2];final JSONObject retryUsage=new JSONObject().put("total_tokens",57);
+  runOnMainSync(()->{RetryService service=new RetryService();service.attach(getTargetContext());retryService[0]=service;service.running=true;service.generation=20;service.goal="Retry test";service.step=7;service.budget.consume();service.history.put("retained action");service.meter.usage(retryUsage);Exception failure=new Protocol.ResponseFailure("ChatGPT response failed",true);
+   service.inferenceFailed(failure,20);service.inferenceFailed(failure,20);service.inferenceFailed(failure,20);
+   if(service.running||!service.paused||service.retries.attempts()!=2)throw new AssertionError("Inference failure did not pause after bounded retries");
+   if(!service.goal.equals("Retry test")||service.step!=7||service.history.length()!=1||!service.meter.summary().contains("57")||!service.budget.exhausted(1))throw new AssertionError("Paused inference lost session state");
+   RetryService manuallyPaused=new RetryService();manuallyPaused.attach(getTargetContext());retryService[1]=manuallyPaused;manuallyPaused.running=true;manuallyPaused.generation=50;manuallyPaused.inferenceFailed(failure,50);manuallyPaused.pauseGoal("Manual pause");
+   service.resumeGoal();int resumed=service.generation;service.inferenceFailed(failure,20);if(!service.running||service.paused||service.generation!=resumed||service.retries.attempts()!=0)throw new AssertionError("Resume or stale failure guard failed");
+  });
+  android.os.SystemClock.sleep(5000);
+  runOnMainSync(()->{RetryService service=retryService[0];try{if(service.observations!=1||retryService[1].observations!=0)throw new AssertionError("Cancelled retry replayed after pause or resume");}finally{service.running=false;service.handler.removeCallbacksAndMessages(null);if(service.planner!=null)service.planner.cancel();retryService[1].handler.removeCallbacksAndMessages(null);}});
   if(!LogArchive.get(getTargetContext()).folder().isEmpty()){
    LogArchive archive=new LogArchive(getTargetContext(),"test-archive.enc");android.net.Uri created=null;
    try{
@@ -40,6 +50,13 @@ public final class DeviceTests extends Instrumentation {
     try(InputStream input=getTargetContext().getContentResolver().openInputStream(created)){if(!new String(input.readAllBytes(),java.nio.charset.StandardCharsets.UTF_8).endsWith("Finished\n"))throw new AssertionError("Final log missing");}
    }finally{archive.writer.shutdown();if(created!=null)android.provider.DocumentsContract.deleteDocument(getTargetContext().getContentResolver(),created);new SecureStore(getTargetContext(),"test-archive.enc").clear();}
   }
-  result.putString("stream","PASS: Android Keystore encryption, restart read, tamper rejection, deletion; live bidirectional GOAL sync and default 100 steps; English and Japanese resources; browser return routing; SAF log export updates one UTF-8 file\n");finish(-1,result);
+  result.putString("stream","PASS: Android Keystore encryption, restart read, tamper rejection, deletion; live bidirectional GOAL sync and default 100 steps; English and Japanese resources; browser return routing; bounded retries and manual resume without stale callbacks; SAF log export updates one UTF-8 file\n");finish(-1,result);
  }catch(Throwable e){result.putString("stream","FAIL: "+e.getClass().getSimpleName()+": "+e.getMessage()+"\n");finish(1,result);}finally{store.clear();}}
+ static final class RetryService extends AgentService {
+  int observations;
+  void attach(android.content.Context context){attachBaseContext(context);}
+  @Override void observe(int id){if(running&&generation==id)observations++;}
+  @Override void log(String message){}
+ }
+
 }

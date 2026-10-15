@@ -100,4 +100,6 @@
  <string name="sign_in_complete">Signed in. Returning to anautomat.</string>
  <string name="return_to_app">Open anautomat</string>
  <string name="sign_in_return_failed">Sign-in could not be completed. Return to anautomat for details.</string>
+ <string name="retry_inference">Retry %1$d/%2$d in %3$d seconds</string>
+ <string name="error_paused">Paused. Press Resume to continue this goal.</string>
 </resources>

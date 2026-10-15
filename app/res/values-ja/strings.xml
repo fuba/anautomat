@@ -100,4 +100,6 @@
  <string name="sign_in_complete">認証が完了しました。anautomat に戻ります。</string>
  <string name="return_to_app">anautomat を開く</string>
  <string name="sign_in_return_failed">認証を完了できませんでした。anautomat で詳細を確認してください。</string>
+ <string name="retry_inference">%3$d 秒後に再試行（%1$d/%2$d）</string>
+ <string name="error_paused">一時停止しました。▶で同じ Goal を再開できます。</string>
 </resources>
