@@ -64,9 +64,16 @@ final class Updates {
   if(!busy.compareAndSet(false,true))return;UpdatePolicy next=release;
   new Thread(()->{try{File apk=new File(context.getCacheDir(),"update.apk");if(!hash(apk).equals(prefs.getString("hash","")))throw new SecurityException("Changed APK");verifyPackage(apk,next);
    main.post(()->{try{AgentService current=AgentService.instance;if(current!=null&&(current.running||current.paused||current.limitReached)){status=text("update_end_goal");return;}if(activity.isFinishing()||activity.isDestroyed())return;
-    Uri uri=Uri.parse("content://"+context.getPackageName()+".updates/anautomat.apk");Intent intent=new Intent(Intent.ACTION_VIEW).setDataAndType(uri,"application/vnd.android.package-archive").addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);intent.setClipData(ClipData.newRawUri("APK",uri));activity.startActivity(intent);status=text("update_ready");
+    activity.startActivity(installerIntent());status=text("update_ready");
    }catch(Exception e){status=text("update_install_failed");}finally{busy.set(false);}});
   }catch(Exception e){ready=false;status=text("update_download_failed");busy.set(false);}},"release-verify").start();
+ }
+ Intent installerIntent(){
+  Uri uri=Uri.parse("content://"+context.getPackageName()+".updates/anautomat.apk");Intent intent=new Intent(Intent.ACTION_VIEW).setDataAndType(uri,"application/vnd.android.package-archive").addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);intent.setClipData(ClipData.newRawUri("APK",uri));
+  // APK viewers such as terminal apps must not intercept the update flow.
+  java.util.List<ResolveInfo> candidates=context.getPackageManager().queryIntentActivities(intent,PackageManager.MATCH_DEFAULT_ONLY|PackageManager.MATCH_SYSTEM_ONLY);
+  for(ResolveInfo candidate:candidates){ActivityInfo info=candidate.activityInfo;if(info!=null&&info.exported){intent.setComponent(new ComponentName(info.packageName,info.name));return intent;}}
+  throw new ActivityNotFoundException("System package installer unavailable");
  }
  void verifyPackage(File file,UpdatePolicy next)throws Exception{
   PackageInfo own=installed(),apk=context.getPackageManager().getPackageArchiveInfo(file.getAbsolutePath(),PackageManager.GET_SIGNING_CERTIFICATES);

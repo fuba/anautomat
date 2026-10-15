@@ -25,6 +25,8 @@ public final class DeviceTests extends Instrumentation {
   if(updates.automatic()&&(updateJob==null||!updateJob.isPeriodic()||!updateJob.isPersisted()||updateJob.getNetworkType()!=android.app.job.JobInfo.NETWORK_TYPE_ANY))throw new AssertionError("Periodic update check constraints missing");
   android.content.pm.ProviderInfo provider=getTargetContext().getPackageManager().getProviderInfo(new android.content.ComponentName(getTargetContext(),UpdateProvider.class),0);
   if(provider.exported||!provider.grantUriPermissions)throw new AssertionError("Update provider is not private");
+  android.content.Intent installer=updates.installerIntent();android.content.pm.ActivityInfo installerInfo=getTargetContext().getPackageManager().getActivityInfo(installer.getComponent(),0);
+  if((installerInfo.applicationInfo.flags&android.content.pm.ApplicationInfo.FLAG_SYSTEM)==0||(installer.getFlags()&android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)==0)throw new AssertionError("Update did not target a system installer with a read grant");
   byte[] releaseBytes=Updates.fetch(UpdatePolicy.API,1024*1024);UpdatePolicy latest=new UpdatePolicy(new JSONObject(new String(releaseBytes,java.nio.charset.StandardCharsets.UTF_8)));
   String checksum=UpdatePolicy.checksum(Updates.fetch(latest.checksumUrl,65536));if(!latest.digest.isEmpty()&&!latest.digest.equals("sha256:"+checksum))throw new AssertionError("Live release digest mismatch");
   try{Updates.fetch("https://example.com/untrusted",100);throw new AssertionError("Unexpected update host accepted");}catch(SecurityException expected){}
@@ -32,8 +34,8 @@ public final class DeviceTests extends Instrumentation {
   if(java.util.Arrays.asList(getContext().getAssets().list("")).contains("same-signer.apk")){
    File fixture=new File(getTargetContext().getCacheDir(),"test-update.apk");
    try{try(InputStream in=getContext().getAssets().open("same-signer.apk");OutputStream out=new FileOutputStream(fixture)){in.transferTo(out);}
-    JSONObject metadata=new JSONObject(new String(releaseBytes,java.nio.charset.StandardCharsets.UTF_8));metadata.put("tag_name","v0.1.10");
-    for(int i=0;i<metadata.getJSONArray("assets").length();i++){JSONObject asset=metadata.getJSONArray("assets").getJSONObject(i);asset.put("browser_download_url","https://github.com/fuba/anautomat/releases/download/v0.1.10/"+asset.getString("name"));}
+    JSONObject metadata=new JSONObject(new String(releaseBytes,java.nio.charset.StandardCharsets.UTF_8));metadata.put("tag_name","v0.1.11");
+    for(int i=0;i<metadata.getJSONArray("assets").length();i++){JSONObject asset=metadata.getJSONArray("assets").getJSONObject(i);asset.put("browser_download_url","https://github.com/fuba/anautomat/releases/download/v0.1.11/"+asset.getString("name"));}
     updates.verifyPackage(fixture,new UpdatePolicy(metadata));
     boolean rejectedVersion=false;try{updates.verifyPackage(fixture,latest);}catch(SecurityException expected){rejectedVersion=true;}if(!rejectedVersion)throw new AssertionError("Wrong APK version accepted");
     android.content.pm.PackageInfo apk=getTargetContext().getPackageManager().getPackageArchiveInfo(fixture.getAbsolutePath(),android.content.pm.PackageManager.GET_SIGNING_CERTIFICATES);

@@ -2,7 +2,7 @@
 $ErrorActionPreference='Stop'
 . "$PSScriptRoot/environment.ps1"
 $env:JAVA_HOME=$jdk
-& "$PSScriptRoot/build.ps1" -Version 0.1.10 -VersionCode 1010
+& "$PSScriptRoot/build.ps1" -Version 0.1.11 -VersionCode 1011
 New-Item -ItemType Directory -Force build/update-test-assets | Out-Null
 Copy-Item build/anautomat.apk build/update-test-assets/same-signer.apk -Force
 if(!(Test-Path build/update-test-wrong.p12)){
