@@ -12,9 +12,9 @@ import java.io.*;
 import java.net.*;
 
 public class AgentService extends AccessibilityService {
- public static AgentService instance; public static volatile String status="",liveText="";public static volatile boolean appVisible;long lastProgress;
+ static final TickerState tickerState=new TickerState();public static AgentService instance; public static volatile String status="",liveText="";public static volatile boolean appVisible;long lastProgress;
  Handler handler=new Handler(); boolean running=false,paused=false,limitReached=false; final StepBudget budget=new StepBudget();final InferenceRetry retries=new InferenceRetry(); int generation=0,step=0; String goal=""; JSONArray history=new JSONArray(); FloatingMenu floating; UsageMeter meter=new UsageMeter(); DirectPlanner planner;
- protected void onServiceConnected(){instance=this;status=I18n.text(AgentService.this,"accessibility_connected");if(floating==null)floating=new FloatingMenu(this);}
+ protected void onServiceConnected(){tickerState.update(liveText,android.os.SystemClock.uptimeMillis(),false);instance=this;status=I18n.text(AgentService.this,"accessibility_connected");if(floating==null)floating=new FloatingMenu(this);}
  public void onConfigurationChanged(android.content.res.Configuration configuration){super.onConfigurationChanged(configuration);if(instance!=this||floating==null)return;boolean open=floating.panel!=null,concealed=floating.concealed;floating.destroy();floating=new FloatingMenu(this);if(open)floating.open();if(concealed)floating.conceal();}
  public void onAccessibilityEvent(AccessibilityEvent e){} public void onInterrupt(){stopGoal(I18n.text(AgentService.this,"interrupted"));}
  public void onDestroy(){if(instance==this){stopGoal(I18n.text(AgentService.this,"service_stopped"));instance=null;}if(floating!=null){floating.destroy();floating=null;}super.onDestroy();}

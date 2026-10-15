@@ -41,6 +41,12 @@ public final class DeviceTests extends Instrumentation {
     appControls.stop.performClick();appControls.refresh();overlayControls.refresh();if(service.stops!=1||!appControls.goal.isEnabled()||!overlayControls.goal.isEnabled())throw new AssertionError("Stop did not unlock both goals");
    }finally{AgentService.instance=previous;GoalSettings.goal(getTargetContext(),draft);((MainActivity)activity).goalControls.refresh();}
   });
+  runOnMainSync(()->{final int[] dismissals={0};ProgressTicker ticker=new ProgressTicker(activity,message->dismissals[0]++);float distance=100*activity.getResources().getDisplayMetrics().density;long now=android.os.SystemClock.uptimeMillis();
+   for(float end:new float[]{distance,-distance}){android.view.MotionEvent down=android.view.MotionEvent.obtain(now,now,0,0,0,0),up=android.view.MotionEvent.obtain(now,now+100,1,end,0,0);ticker.onTouchEvent(down);ticker.onTouchEvent(up);down.recycle();up.recycle();}
+   if(dismissals[0]!=2)throw new AssertionError("Ticker swipe did not dismiss in both directions");
+   android.view.MotionEvent down=android.view.MotionEvent.obtain(now,now,0,0,0,0),up=android.view.MotionEvent.obtain(now,now+100,1,0,distance,0);ticker.onTouchEvent(down);ticker.onTouchEvent(up);down.recycle();up.recycle();if(dismissals[0]!=2)throw new AssertionError("Vertical ticker gesture dismissed");
+   ticker.performAccessibilityAction(android.view.accessibility.AccessibilityNodeInfo.ACTION_DISMISS,null);if(dismissals[0]!=3)throw new AssertionError("Accessible dismiss failed");
+  });
   final RetryService[] retryService=new RetryService[2];final JSONObject retryUsage=new JSONObject().put("total_tokens",57);
   runOnMainSync(()->{RetryService service=new RetryService();service.attach(getTargetContext());retryService[0]=service;service.running=true;service.generation=20;service.goal="Retry test";service.step=7;service.budget.consume();service.history.put("retained action");service.meter.usage(retryUsage);Exception failure=new Protocol.ResponseFailure("ChatGPT response failed",true);
    service.inferenceFailed(failure,20);service.inferenceFailed(failure,20);service.inferenceFailed(failure,20);
@@ -61,7 +67,7 @@ public final class DeviceTests extends Instrumentation {
     try(InputStream input=getTargetContext().getContentResolver().openInputStream(created)){if(!new String(input.readAllBytes(),java.nio.charset.StandardCharsets.UTF_8).endsWith("Finished\n"))throw new AssertionError("Final log missing");}
    }finally{archive.writer.shutdown();if(created!=null)android.provider.DocumentsContract.deleteDocument(getTargetContext().getContentResolver(),created);new SecureStore(getTargetContext(),"test-archive.enc").clear();}
   }
-  result.putString("stream","PASS: Android Keystore encryption, restart read, tamper rejection, deletion; live bidirectional GOAL sync and default 100 steps; English and Japanese resources; browser return routing; bounded retries and manual resume without stale callbacks; unified play/pause/continue/stop controls; SAF log export updates one UTF-8 file\n");finish(-1,result);
+  result.putString("stream","PASS: Android Keystore encryption, restart read, tamper rejection, deletion; live bidirectional GOAL sync and default 100 steps; English and Japanese resources; browser return routing; bounded retries and manual resume without stale callbacks; unified play/pause/continue/stop controls; bidirectional ticker swipe dismissal; SAF log export updates one UTF-8 file\n");finish(-1,result);
  }catch(Throwable e){result.putString("stream","FAIL: "+e.getClass().getSimpleName()+": "+e.getMessage()+"\n");finish(1,result);}finally{store.clear();}}
  static final class RetryService extends AgentService {
   int observations;

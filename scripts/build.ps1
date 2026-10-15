@@ -1,4 +1,4 @@
-param([switch]$Release,[string]$Version="0.1.6",[int]$VersionCode=1006)
+param([switch]$Release,[string]$Version="0.1.7",[int]$VersionCode=1007)
 $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot -Parent
 . "$PSScriptRoot/environment.ps1"
