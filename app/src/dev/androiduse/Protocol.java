@@ -50,6 +50,12 @@ public final class Protocol {
   if(!completed||text.length()==0)throw new ResponseFailure("Response ended before completion",true);return text.toString();
  }
  public static JSONObject validateAction(JSONObject action,int width,int height)throws Exception{
+  String tool=action.getString("type");
+  if(tool.equals("run_code")){if(!(action.get("reason") instanceof String)||!(action.get("code") instanceof String)||action.getString("code").isEmpty()||action.getString("code").length()>SandboxEngine.MAX_CODE)throw new IOException("Invalid sandbox code");if(action.has("input")&&!action.isNull("input")&&(!(action.get("input") instanceof String)||action.getString("input").length()>SandboxEngine.MAX_INPUT))throw new IOException("Invalid sandbox input");return action;}
+  if(tool.equals("macro")){if(!(action.get("reason") instanceof String))throw new IOException("Invalid macro reason");action.put("actions",new MacroPlan(action.getJSONArray("actions"),width,height).actions);return action;}
+  return validatePrimitive(action,width,height);
+ }
+ public static JSONObject validatePrimitive(JSONObject action,int width,int height)throws Exception{
   String type=action.getString("type");if(!Arrays.asList("tap","long_press","swipe","text","input_text","press_enter","launch","back","home","recents","notifications","quick_settings","wait","done","blocked").contains(type)||!(action.get("reason") instanceof String))throw new IOException("Invalid action");
   if(Arrays.asList("tap","long_press","swipe").contains(type)){coordinate(action,"x",width);coordinate(action,"y",height);if(type.equals("swipe")){coordinate(action,"x2",width);coordinate(action,"y2",height);}}
   if((type.equals("text")||type.equals("input_text"))&&(!(action.get("text") instanceof String)||action.getString("text").length()>10000))throw new IOException("Invalid text action");if(type.equals("launch")&&!action.getString("package").matches("[a-zA-Z0-9_.]+"))throw new IOException("Invalid package");return action;

@@ -7,7 +7,7 @@ The latest release is supported. This is an experimental device-control applicat
 ## Application boundaries
 
 - OAuth uses a device-local loopback callback, PKCE S256, state and nonce checks, and RS256 identity verification. Tokens are encrypted by Android Keystore in app-private storage; backups and cleartext HTTP requests are disabled.
-- HTTPS requests are restricted to the official authentication and API hosts. Screenshots, visible UI text, installed-app names, the goal and action history are transmitted to OpenAI only during execution.
+- Authentication and inference requests are restricted to the official authentication and API hosts. Screenshots, visible UI text, installed-app names, the goal and action history are transmitted to OpenAI only during execution.
 - Screens are treated as untrusted input in the planner prompt. Sensitive actions require explicit goal authorization. This is a model instruction, not a complete policy enforcement or approval system.
 - Pause/stop invalidates outstanding model responses. Gestures already dispatched to Android may finish.
 - Local history is encrypted. User-selected exported log files are plain UTF-8 text and can contain goals, visible-state descriptions and public reasoning summaries. Raw private reasoning and authentication tokens are not logged.
@@ -35,3 +35,11 @@ Release keys are stored in GitHub Actions secrets and are exposed only to the re
 The update checker contacts GitHub's public API without account credentials. Its persisted, network-constrained JobScheduler task needs `RECEIVE_BOOT_COMPLETED` and `ACCESS_NETWORK_STATE`; only Android may bind the exported job service through `BIND_JOB_SERVICE`. `REQUEST_INSTALL_PACKAGES` enables a user-requested system installer, never silent installation. The APK content provider is non-exported and read-only with a single exact path and temporary URI grants.
 
 Release metadata and downloads are untrusted input: stable semantic versions, exact repository asset URLs, HTTPS redirect host allowlisting, bounded transfers, SHA-256, package identity, monotonic version code and identical signing certificates are checked before installation. The checksum alone is not publisher authentication; the installed signing identity and Android package installer provide that boundary. New third-party libraries were not introduced; existing CI dependency cooldown and pinned-action policies still apply.
+
+## Generated Java and macros
+
+Generated Java is compiled by Janino and converted to DEX by D8 entirely inside a fresh, non-exported Android `isolatedProcess` service. The program receives only bounded JSON copies and a queue for operations, with no Android context or storage/network capability. A fail-closed class-file validator rejects APIs outside the explicit allowlist, reflection, class loading, native methods, finalizers and dynamic bytecode before loading. Android UID isolation is the credential/storage boundary; the allowlist is additional defense. Code is never compiled or loaded in the credential-bearing app process.
+
+Build/execution deadlines, sampled heap-growth limits and a separate parent deadline end failed invocations. Heap sampling is not a hard RSS cap. The parent validates result size and nesting before parsing, limits state, and validates every macro operation before any starts. Touch/text operations require an expected package; optional literal-text guards further narrow the target. This does not make multi-step screen operations transactional: completed actions cannot be rolled back and an in-flight gesture can finish after cancellation. Pause/error never automatically replays the batch.
+
+New compiler/dexer artifacts are pinned in the dependency lock, checked against upstream publication metadata and SHA-256, audited for known advisories, and subject to the same seven-day cooldown. Bundled third-party notices are included in the APK and accessible in Settings. See [automation architecture and limits](docs/automation.md).

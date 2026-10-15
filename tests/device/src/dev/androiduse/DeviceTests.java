@@ -34,8 +34,8 @@ public final class DeviceTests extends Instrumentation {
   if(java.util.Arrays.asList(getContext().getAssets().list("")).contains("same-signer.apk")){
    File fixture=new File(getTargetContext().getCacheDir(),"test-update.apk");
    try{try(InputStream in=getContext().getAssets().open("same-signer.apk");OutputStream out=new FileOutputStream(fixture)){in.transferTo(out);}
-    JSONObject metadata=new JSONObject(new String(releaseBytes,java.nio.charset.StandardCharsets.UTF_8));metadata.put("tag_name","v0.1.11");
-    for(int i=0;i<metadata.getJSONArray("assets").length();i++){JSONObject asset=metadata.getJSONArray("assets").getJSONObject(i);asset.put("browser_download_url","https://github.com/fuba/anautomat/releases/download/v0.1.11/"+asset.getString("name"));}
+    JSONObject metadata=new JSONObject(new String(releaseBytes,java.nio.charset.StandardCharsets.UTF_8));metadata.put("tag_name","v1.0.1");
+    for(int i=0;i<metadata.getJSONArray("assets").length();i++){JSONObject asset=metadata.getJSONArray("assets").getJSONObject(i);asset.put("browser_download_url","https://github.com/fuba/anautomat/releases/download/v1.0.1/"+asset.getString("name"));}
     updates.verifyPackage(fixture,new UpdatePolicy(metadata));
     boolean rejectedVersion=false;try{updates.verifyPackage(fixture,latest);}catch(SecurityException expected){rejectedVersion=true;}if(!rejectedVersion)throw new AssertionError("Wrong APK version accepted");
     android.content.pm.PackageInfo apk=getTargetContext().getPackageManager().getPackageArchiveInfo(fixture.getAbsolutePath(),android.content.pm.PackageManager.GET_SIGNING_CERTIFICATES);

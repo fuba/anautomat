@@ -109,7 +109,7 @@ def check_download(item, days):
         if asset["browser_download_url"] != item["url"] or asset.get("digest") != "sha256:" + item["sha256"]:
             raise ValueError(f"Upstream asset changed: {item['name']}")
     else:
-        if not item["url"].startswith("https://repo.maven.apache.org/maven2/"):
+        if not item["url"].startswith(("https://repo.maven.apache.org/maven2/", "https://dl.google.com/dl/android/maven2/")):
             raise ValueError("Unexpected Maven download host")
         with request(item["url"], "HEAD") as response:
             modified = response.headers.get("Last-Modified")
@@ -174,6 +174,12 @@ def audit(data):
     print("PASS: GitHub advisory database audit")
 
 
+def sandbox_policy(app, namespace):
+    services = [node for node in app.findall("service") if node.get(namespace + "name") == ".SandboxService"]
+    if len(services) != 1 or any(services[0].get(namespace + key) != value for key, value in {"exported": "false", "isolatedProcess": "true", "process": ":sandbox"}.items()):
+        raise ValueError("Code execution must use one private isolated sandbox service")
+
+
 def policy(data):
     pins = {i["repository"]: i["sha"] for i in data["actions"]}
     for path in (ROOT / ".github/workflows").glob("*.yml"):
@@ -210,6 +216,7 @@ def policy(data):
             if node.get(namespace + "name") == ".UpdateJob" and node.get(namespace + "permission") == "android.permission.BIND_JOB_SERVICE":
                 continue
             raise ValueError("Unexpected exported Android component")
+    sandbox_policy(app, namespace)
     english = {i.get("name"): i.text or "" for i in ET.parse(ROOT / "app/res/values/strings.xml").getroot()}
     japanese = {i.get("name"): i.text or "" for i in ET.parse(ROOT / "app/res/values-ja/strings.xml").getroot()}
     if english.keys() != japanese.keys():

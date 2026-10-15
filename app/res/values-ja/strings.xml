@@ -123,4 +123,14 @@
  <string name="update_end_goal">更新する前に実行中の Goal を終了してください。</string>
  <string name="update_allow_install">設定で anautomat からのインストールを許可し、もう一度「インストール」を押してください。</string>
  <string name="update_install_failed">Android のインストール画面を開けませんでした。</string>
+ <string name="code_execution">Java の実行を許可</string>
+ <string name="code_limits">隔離プロセス · ビルド 8 秒 / 実行 2 秒 · API 制限あり</string>
+ <string name="sandbox_running">Java を実行中</string>
+ <string name="sandbox_failed">Java の実行に失敗: </string>
+ <string name="sandbox_disabled">コード実行が無効になっています</string>
+ <string name="sandbox_result">実行結果: </string>
+ <string name="macro_progress">マクロ %1$d/%2$d</string>
+ <string name="macro_completed">マクロ完了: %1$d 操作</string>
+ <string name="macro_failed">マクロ停止: </string>
+ <string name="open_source_notices">オープンソースライセンス</string>
 </resources>

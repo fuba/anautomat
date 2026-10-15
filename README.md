@@ -12,6 +12,12 @@ One goal. **32 steps. A working Mandelbrot explorer.** anautomat installs Python
 
 The video shows a real emulator run. The 54-second edit labels accelerated sections; the GIF is a further sped-up preview. [Full recording](https://github.com/fuba/anautomat/releases/download/v0.1.2/anautomat-fractal-full.mp4), [exact goal and setup](docs/demo/README.md), and [generated source](docs/demo/generated-index.html) are available. The PC installed the APKs and recorded the emulator; inference and every goal action ran inside Android.
 
+## Code and macros
+
+The agent can write restricted **Java 8** code, compile it on the phone, and use its result in a Goal. Code runs in a fresh permissionless Android process with API allowlisting and build/execution limits. JSON state, calculations, strings, collections, dates, hashing and code-generated device macros are supported. No JavaScript runtime, PC bridge or on-device JDK installation is needed.
+
+Macros execute up to 32 validated operations sequentially without a model request between each operation. Touch/text steps require an app-package guard and may check visible text. Pause or failure discards the remaining batch; manual resume takes a fresh screenshot. Disable Java execution in Settings when it is not needed. [Tool APIs, limits and security boundaries](docs/automation.md) · [On-device test evidence](docs/automation-evidence.md).
+
 ## Install
 
 1. Download **anautomat.apk** from GitHub Releases. Android 11 or later is required.

@@ -14,6 +14,21 @@ spec.loader.exec_module(security)
 
 
 class SecurityGateTests(unittest.TestCase):
+    def test_sandbox_manifest_is_fail_closed(self):
+        import xml.etree.ElementTree as ET
+        namespace = "{http://schemas.android.com/apk/res/android}"
+        app = ET.Element("application")
+        with self.assertRaisesRegex(ValueError, "isolated"):
+            security.sandbox_policy(app, namespace)
+        service = ET.SubElement(app, "service", {namespace + key: value for key, value in {"name": ".SandboxService", "exported": "false", "isolatedProcess": "true", "process": ":sandbox"}.items()})
+        security.sandbox_policy(app, namespace)
+        for key, value in (("exported", "true"), ("isolatedProcess", "false"), ("process", ":main")):
+            old = service.get(namespace + key)
+            service.set(namespace + key, value)
+            with self.assertRaisesRegex(ValueError, "isolated"):
+                security.sandbox_policy(app, namespace)
+            service.set(namespace + key, old)
+
     def test_cooldown_boundary(self):
         now = dt.datetime(2026, 10, 15, tzinfo=dt.timezone.utc)
         with patch.object(security, "NOW", lambda: now):
