@@ -106,4 +106,21 @@
  <string name="cancel_sign_in">サインインをキャンセル</string>
  <string name="step_status">" • ステップ %1$d"</string>
  <string name="goal_locked">Goal を変更するには、先に ■ で終了してください。</string>
+ <string name="updates">アップデート</string>
+ <string name="update_installed">インストール済み: %1$s</string>
+ <string name="update_automatic">GitHub Releases を自動確認</string>
+ <string name="update_check">更新を確認</string>
+ <string name="update_checking">GitHub Releases を確認中…</string>
+ <string name="update_available">バージョン %1$s が利用可能</string>
+ <string name="update_current">最新バージョンです</string>
+ <string name="update_check_failed">更新を確認できませんでした。時間をおいて再試行してください。</string>
+ <string name="update_open">anautomat を開いてダウンロード・インストールしてください。</string>
+ <string name="update_download">ダウンロード</string>
+ <string name="update_install">インストール</string>
+ <string name="update_downloading">APK をダウンロード・検証中…</string>
+ <string name="update_ready">APK を検証しました。Android の画面でインストールを確認してください。</string>
+ <string name="update_download_failed">ダウンロードまたは検証に失敗しました。通信状態と、同じ署名のリリースであることを確認してください。</string>
+ <string name="update_end_goal">更新する前に実行中の Goal を終了してください。</string>
+ <string name="update_allow_install">設定で anautomat からのインストールを許可し、もう一度「インストール」を押してください。</string>
+ <string name="update_install_failed">Android のインストール画面を開けませんでした。</string>
 </resources>

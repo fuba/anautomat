@@ -198,7 +198,7 @@ def policy(data):
             raise ValueError("Sensitive app data must not be backed up or sent over cleartext")
     if app.get(namespace + "debuggable", "false") != "false":
         raise ValueError("Release manifest must not be debuggable")
-    allowed = {"android.permission.INTERNET", "android.permission.FOREGROUND_SERVICE", "android.permission.FOREGROUND_SERVICE_DATA_SYNC", "android.permission.POST_NOTIFICATIONS"}
+    allowed = {"android.permission.INTERNET", "android.permission.ACCESS_NETWORK_STATE", "android.permission.FOREGROUND_SERVICE", "android.permission.FOREGROUND_SERVICE_DATA_SYNC", "android.permission.POST_NOTIFICATIONS", "android.permission.REQUEST_INSTALL_PACKAGES", "android.permission.RECEIVE_BOOT_COMPLETED"}
     if {i.get(namespace + "name") for i in manifest.findall("uses-permission")} != allowed:
         raise ValueError("Review new Android permissions before changing the policy")
     for node in app:
@@ -206,6 +206,8 @@ def policy(data):
             if node.get(namespace + "name") == ".MainActivity":
                 continue
             if node.get(namespace + "name") == ".AgentService" and node.get(namespace + "permission") == "android.permission.BIND_ACCESSIBILITY_SERVICE":
+                continue
+            if node.get(namespace + "name") == ".UpdateJob" and node.get(namespace + "permission") == "android.permission.BIND_JOB_SERVICE":
                 continue
             raise ValueError("Unexpected exported Android component")
     english = {i.get("name"): i.text or "" for i in ET.parse(ROOT / "app/res/values/strings.xml").getroot()}

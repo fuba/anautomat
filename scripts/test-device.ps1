@@ -8,7 +8,8 @@ $env:PATH="$jdk\bin;$env:PATH"
 function Run([string]$tool,[string[]]$arguments){& $tool @arguments;if($LASTEXITCODE -ne 0){throw "$tool failed"}}
 Set-Location $root
 New-Item -ItemType Directory -Force build\device-tests\classes,build\device-tests\dex | Out-Null
-Run "$bt\aapt2.exe" @('link','-o','build/device-tests/base.apk','--manifest','tests/device/AndroidManifest.xml','-I',"$sdk/platforms/android-36/android.jar")
+$assetArgs=@();if(Test-Path build/update-test-assets){$assetArgs=@('-A','build/update-test-assets')}
+Run "$bt\aapt2.exe" (@('link','-o','build/device-tests/base.apk','--manifest','tests/device/AndroidManifest.xml','-I',"$sdk/platforms/android-36/android.jar")+$assetArgs)
 Run "$jdk\bin\javac.exe" @('-encoding','UTF-8','-source','11','-target','11','-cp',"$sdk/platforms/android-36/android.jar;build/classes",'-d','build/device-tests/classes','tests/device/src/dev/androiduse/DeviceTests.java')
 Run "$jdk\bin\jar.exe" @('cf','build/device-tests/classes.jar','-C','build/device-tests/classes','.')
 Run "$bt\d8.bat" @('--lib',"$sdk/platforms/android-36/android.jar",'--min-api','30','--output','build/device-tests/dex','build/device-tests/classes.jar')

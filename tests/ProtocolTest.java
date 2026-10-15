@@ -11,7 +11,28 @@ public final class ProtocolTest {
  static void reject(Work work)throws Exception{try{work.run();}catch(Exception e){passed++;return;}throw new AssertionError("Invalid input was accepted");}
  static void check(boolean value){if(!value)throw new AssertionError();passed++;}
  static String jwt(JSONObject claims,KeyPair pair)throws Exception{String body=Protocol.b64("{\"alg\":\"RS256\",\"kid\":\"test\"}".getBytes(StandardCharsets.UTF_8))+"."+Protocol.b64(claims.toString().getBytes(StandardCharsets.UTF_8));Signature s=Signature.getInstance("SHA256withRSA");s.initSign(pair.getPrivate());s.update(body.getBytes(StandardCharsets.US_ASCII));return body+"."+Protocol.b64(s.sign());}
+ static JSONObject releaseFixture()throws Exception{
+  JSONArray assets=new JSONArray();for(String name:new String[]{"anautomat.apk","SHA256SUMS"})assets.put(new JSONObject().put("name",name).put("state","uploaded").put("size",123).put("browser_download_url","https://github.com/fuba/anautomat/releases/download/v0.1.10/"+name));
+  return new JSONObject().put("tag_name","v0.1.10").put("draft",false).put("prerelease",false).put("assets",assets);
+ }
+ static void updatePolicyTests()throws Exception{
+  check(UpdatePolicy.versionCode("v0.1.10")==1010);check(UpdatePolicy.versionCode("v1.2.3")==1002003);
+  for(String tag:new String[]{"v01.1.1","v1.1000.0","1.0.0","v1.0.0-beta","v1.0.0/../x","v-1.0.0"})reject(()->UpdatePolicy.versionCode(tag));
+  UpdatePolicy valid=new UpdatePolicy(releaseFixture());check(valid.code==1010&&valid.version.equals("0.1.10"));
+  reject(()->new UpdatePolicy(releaseFixture().put("draft",true)));reject(()->new UpdatePolicy(releaseFixture().put("prerelease",true)));
+  JSONObject wrong=releaseFixture();wrong.getJSONArray("assets").getJSONObject(0).put("browser_download_url","https://evil.example/anautomat.apk");reject(()->new UpdatePolicy(wrong));
+  JSONObject huge=releaseFixture();huge.getJSONArray("assets").getJSONObject(0).put("size",UpdatePolicy.MAX_APK+1);reject(()->new UpdatePolicy(huge));
+  JSONObject duplicate=releaseFixture();duplicate.getJSONArray("assets").put(duplicate.getJSONArray("assets").getJSONObject(0));reject(()->new UpdatePolicy(duplicate));
+  JSONObject missing=releaseFixture();missing.getJSONArray("assets").remove(0);reject(()->new UpdatePolicy(missing));
+  JSONObject digest=releaseFixture();digest.getJSONArray("assets").getJSONObject(0).put("digest","sha256:no");reject(()->new UpdatePolicy(digest));
+  String hash="a".repeat(64);check(UpdatePolicy.checksum((hash+"  anautomat.apk\n").getBytes(StandardCharsets.US_ASCII)).equals(hash));
+  reject(()->UpdatePolicy.checksum((hash+"  another.apk").getBytes(StandardCharsets.US_ASCII)));
+  reject(()->UpdatePolicy.checksum((hash+"  anautomat.apk\n"+hash+"  anautomat.apk").getBytes(StandardCharsets.US_ASCII)));
+  for(String host:new String[]{"http://github.com/a","https://github.com.evil.example/a","https://user@github.com/a","https://github.com:444/a","https://evil.example/a","file:///a"})check(!UpdatePolicy.trusted(host));
+  check(UpdatePolicy.trusted(UpdatePolicy.API));check(UpdatePolicy.trusted("https://release-assets.githubusercontent.com/a?token=example"));
+ }
  public static void main(String[] args)throws Exception{
+  updatePolicyTests();
   check(Protocol.challenge("dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk").equals("E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM"));
   check(Protocol.callback("/auth/callback?state=valid&code=code&client_id=oaiapp_test","valid",null).get("client_id").equals("oaiapp_test"));
   check(Protocol.callback("/auth/callback?state=valid&code=code","valid","oaiapp_test").get("client_id").equals("oaiapp_test"));

@@ -29,3 +29,9 @@ The Android app has no bundled third-party libraries. JVM tests use the locked `
 Android SDK platform 36/build-tools 36.0.0 and Java 21 are taken from the GitHub-hosted Windows runner image. CI never invokes a package manager to fetch a current SDK or JDK. The runner image and hosted action service remain trusted infrastructure; the seven-day download gate does not control GitHub's own runner-image updates. The cooldown reduces exposure to newly published packages but does not prove that an older dependency is safe.
 
 Release keys are stored in GitHub Actions secrets and are exposed only to the release signing step after checks succeed. Pull-request jobs receive no signing secrets. Tags should be created from reviewed source. Release APKs carry SHA-256 checksums and GitHub provenance attestations.
+
+## In-app release updates
+
+The update checker contacts GitHub's public API without account credentials. Its persisted, network-constrained JobScheduler task needs `RECEIVE_BOOT_COMPLETED` and `ACCESS_NETWORK_STATE`; only Android may bind the exported job service through `BIND_JOB_SERVICE`. `REQUEST_INSTALL_PACKAGES` enables a user-requested system installer, never silent installation. The APK content provider is non-exported and read-only with a single exact path and temporary URI grants.
+
+Release metadata and downloads are untrusted input: stable semantic versions, exact repository asset URLs, HTTPS redirect host allowlisting, bounded transfers, SHA-256, package identity, monotonic version code and identical signing certificates are checked before installation. The checksum alone is not publisher authentication; the installed signing identity and Android package installer provide that boundary. New third-party libraries were not introduced; existing CI dependency cooldown and pinned-action policies still apply.

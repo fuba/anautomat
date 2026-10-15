@@ -24,6 +24,14 @@ Execution needs internet access and a ChatGPT account with access to the request
 
 Release APKs use a persistent release signing certificate. Development APKs use a separate debug certificate and cannot be updated in place to the release build. The application ID remains `dev.androiduse` for compatibility with the prototype's data and settings.
 
+### Updates on the phone
+
+From v0.1.9, the app checks this repository's latest stable GitHub Release approximately every six hours and when opened after that interval. Android battery and background restrictions can delay checks. The Updates card has an automatic-check switch and a manual check button. Allow notifications to receive a one-time notification for each new version.
+
+Tap **Download**, then **Install**. The first time, Android asks you to allow installation from anautomat; return and tap Install again. Android always asks for installation confirmation. End any active or paused Goal before installing. Updates preserve application data and sign-in. Installing v0.1.9 itself requires downloading the APK once through the link above.
+
+The updater accepts only this repository's stable versioned release assets, bounds downloads, checks SHA-256 against `SHA256SUMS` and GitHub's asset digest when present, and requires the same package ID and signing certificate as the installed app with a strictly newer version. APKs are kept in private cache and exposed only through a read-only URI grant to Android's installer. A development build cannot install production releases because their signing certificates differ. No additional update SDK, server, API key, or PC is required.
+
 ## Controls
 
 - The translucent circular button stays above other apps while the accessibility service is connected. Drag it to reposition; tap it to open the menu in place.
@@ -117,3 +125,5 @@ The monochrome identity and original SVG mark are documented in [design/README.m
 ## License
 
 [MIT](LICENSE).
+
+For native updater verification, run `scripts/prepare-update-tests.ps1`, reinstall the normal development APK, and run `scripts/test-device.ps1`. Optional fixture APKs stay in ignored `build/update-test-assets`; they exercise matching-signature acceptance and different-signature/version rejection without installing a fake newer app. Native update tests also contact the real GitHub API and checksum asset and check the private provider and persisted network job.

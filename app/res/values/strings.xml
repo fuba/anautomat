@@ -106,4 +106,21 @@
  <string name="cancel_sign_in">Cancel sign-in</string>
  <string name="step_status">" • Step %1$d"</string>
  <string name="goal_locked">End the current goal before editing it.</string>
+ <string name="updates">Updates</string>
+ <string name="update_installed">Installed: %1$s</string>
+ <string name="update_automatic">Check GitHub Releases automatically</string>
+ <string name="update_check">Check for updates</string>
+ <string name="update_checking">Checking GitHub Releases…</string>
+ <string name="update_available">Version %1$s is available</string>
+ <string name="update_current">Up to date</string>
+ <string name="update_check_failed">Could not check for updates. Try again later.</string>
+ <string name="update_open">Open anautomat to download and install.</string>
+ <string name="update_download">Download</string>
+ <string name="update_install">Install</string>
+ <string name="update_downloading">Downloading and verifying APK…</string>
+ <string name="update_ready">APK verified. Android will ask you to confirm installation.</string>
+ <string name="update_download_failed">Download or verification failed. Check your connection and use a release signed by the same publisher.</string>
+ <string name="update_end_goal">End the current Goal before installing an update.</string>
+ <string name="update_allow_install">Allow updates from anautomat in Settings, then tap Install again.</string>
+ <string name="update_install_failed">Could not open the Android installer.</string>
 </resources>

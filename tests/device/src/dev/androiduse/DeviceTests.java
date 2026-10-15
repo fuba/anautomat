@@ -20,6 +20,32 @@ public final class DeviceTests extends Instrumentation {
   if(destination==null||!destination.activityInfo.name.equals("dev.androiduse.MainActivity")||!"dev.androiduse".equals(authReturn.getPackage()))throw new AssertionError("Browser return does not resolve to the app");
   android.content.Intent wrongReturn=new android.content.Intent(android.content.Intent.ACTION_VIEW,android.net.Uri.parse("anautomat://auth/other")).setPackage("dev.androiduse").addCategory(android.content.Intent.CATEGORY_BROWSABLE);
   if(getTargetContext().getPackageManager().resolveActivity(wrongReturn,android.content.pm.PackageManager.MATCH_DEFAULT_ONLY)!=null)throw new AssertionError("Unexpected browser return path accepted");
+  Updates updates=Updates.get(getTargetContext());
+  android.app.job.JobInfo updateJob=getTargetContext().getSystemService(android.app.job.JobScheduler.class).getPendingJob(Updates.JOB);
+  if(updates.automatic()&&(updateJob==null||!updateJob.isPeriodic()||!updateJob.isPersisted()||updateJob.getNetworkType()!=android.app.job.JobInfo.NETWORK_TYPE_ANY))throw new AssertionError("Periodic update check constraints missing");
+  android.content.pm.ProviderInfo provider=getTargetContext().getPackageManager().getProviderInfo(new android.content.ComponentName(getTargetContext(),UpdateProvider.class),0);
+  if(provider.exported||!provider.grantUriPermissions)throw new AssertionError("Update provider is not private");
+  byte[] releaseBytes=Updates.fetch(UpdatePolicy.API,1024*1024);UpdatePolicy latest=new UpdatePolicy(new JSONObject(new String(releaseBytes,java.nio.charset.StandardCharsets.UTF_8)));
+  String checksum=UpdatePolicy.checksum(Updates.fetch(latest.checksumUrl,65536));if(!latest.digest.isEmpty()&&!latest.digest.equals("sha256:"+checksum))throw new AssertionError("Live release digest mismatch");
+  try{Updates.fetch("https://example.com/untrusted",100);throw new AssertionError("Unexpected update host accepted");}catch(SecurityException expected){}
+  // Optional same-key higher-version fixture exercises Android's real APK parser.
+  if(java.util.Arrays.asList(getContext().getAssets().list("")).contains("same-signer.apk")){
+   File fixture=new File(getTargetContext().getCacheDir(),"test-update.apk");
+   try{try(InputStream in=getContext().getAssets().open("same-signer.apk");OutputStream out=new FileOutputStream(fixture)){in.transferTo(out);}
+    JSONObject metadata=new JSONObject(new String(releaseBytes,java.nio.charset.StandardCharsets.UTF_8));metadata.put("tag_name","v0.1.10");
+    for(int i=0;i<metadata.getJSONArray("assets").length();i++){JSONObject asset=metadata.getJSONArray("assets").getJSONObject(i);asset.put("browser_download_url","https://github.com/fuba/anautomat/releases/download/v0.1.10/"+asset.getString("name"));}
+    updates.verifyPackage(fixture,new UpdatePolicy(metadata));
+    boolean rejectedVersion=false;try{updates.verifyPackage(fixture,latest);}catch(SecurityException expected){rejectedVersion=true;}if(!rejectedVersion)throw new AssertionError("Wrong APK version accepted");
+    android.content.pm.PackageInfo apk=getTargetContext().getPackageManager().getPackageArchiveInfo(fixture.getAbsolutePath(),android.content.pm.PackageManager.GET_SIGNING_CERTIFICATES);
+    if(!Updates.signers(apk).equals(Updates.signers(updates.installed())))throw new AssertionError("Real signer comparison failed");
+    if(java.util.Arrays.asList(getContext().getAssets().list("")).contains("wrong-signer.apk")){
+     try(InputStream in=getContext().getAssets().open("wrong-signer.apk");OutputStream out=new FileOutputStream(fixture)){in.transferTo(out);}
+     boolean rejectedSigner=false;try{updates.verifyPackage(fixture,new UpdatePolicy(metadata));}catch(SecurityException expected){rejectedSigner=true;}if(!rejectedSigner)throw new AssertionError("Different signing certificate accepted");
+    }
+   }finally{fixture.delete();}
+  }
+  try{getTargetContext().getContentResolver().openFileDescriptor(android.net.Uri.parse("content://dev.androiduse.updates/other.apk"),"r");throw new AssertionError("Unexpected provider path accepted");}catch(FileNotFoundException expected){}
+  try{getTargetContext().getContentResolver().openFileDescriptor(android.net.Uri.parse("content://dev.androiduse.updates/anautomat.apk"),"w");throw new AssertionError("Writable update provider accepted");}catch(FileNotFoundException expected){}
   android.app.Activity activity=startActivitySync(new android.content.Intent(getTargetContext(),MainActivity.class).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK));
   runOnMainSync(()->{
    String saved=GoalSettings.goal(getTargetContext());android.widget.LinearLayout holder=new android.widget.LinearLayout(activity);
@@ -38,6 +64,7 @@ public final class DeviceTests extends Instrumentation {
     appControls.activate();if(service.starts!=1)throw new AssertionError("Play did not start idle goal");appControls.refresh();overlayControls.refresh();if(appControls.goal.isEnabled()||overlayControls.goal.isEnabled()||appControls.voice.isEnabled())throw new AssertionError("Active goal is editable");
     overlayControls.activate();if(service.pauses!=1)throw new AssertionError("Same primary button did not pause");appControls.refresh();overlayControls.refresh();if(!appControls.primary.getContentDescription().equals(I18n.text(activity,"resume"))||!appControls.primary.getContentDescription().equals(overlayControls.primary.getContentDescription()))throw new AssertionError("Paused controls differ");
     appControls.activate();if(service.resumes!=1||service.starts!=1)throw new AssertionError("Play restarted instead of resuming");service.running=false;service.limitReached=true;appControls.refresh();overlayControls.refresh();if(!appControls.primary.getContentDescription().equals(I18n.text(activity,"continue_goal")))throw new AssertionError("Play does not describe continuation");overlayControls.activate();if(service.continues!=1)throw new AssertionError("Play did not continue budget");
+    updates.ready=true;updates.release=latest;updates.install(activity);if(!updates.status.equals(I18n.text(getTargetContext(),"update_end_goal")))throw new AssertionError("Installer did not block active Goal");updates.ready=false;updates.release=null;
     appControls.stop.performClick();appControls.refresh();overlayControls.refresh();if(service.stops!=1||!appControls.goal.isEnabled()||!overlayControls.goal.isEnabled())throw new AssertionError("Stop did not unlock both goals");
    }finally{AgentService.instance=previous;GoalSettings.goal(getTargetContext(),draft);((MainActivity)activity).goalControls.refresh();}
   });
@@ -68,7 +95,7 @@ public final class DeviceTests extends Instrumentation {
     try(InputStream input=getTargetContext().getContentResolver().openInputStream(created)){if(!new String(input.readAllBytes(),java.nio.charset.StandardCharsets.UTF_8).endsWith("Finished\n"))throw new AssertionError("Final log missing");}
    }finally{archive.writer.shutdown();if(created!=null)android.provider.DocumentsContract.deleteDocument(getTargetContext().getContentResolver(),created);new SecureStore(getTargetContext(),"test-archive.enc").clear();}
   }
-  result.putString("stream","PASS: Android Keystore encryption, restart read, tamper rejection, deletion; live bidirectional GOAL sync and default 100 steps; English and Japanese resources; browser return routing; bounded retries and manual resume without stale callbacks; unified play/pause/continue/stop controls; bidirectional ticker swipe dismissal; SAF log export updates one UTF-8 file\n");finish(-1,result);
+  result.putString("stream","PASS: Android Keystore encryption, restart read, tamper rejection, deletion; live bidirectional GOAL sync and default 100 steps; English and Japanese resources; browser return routing; bounded retries and manual resume without stale callbacks; unified play/pause/continue/stop controls; bidirectional ticker swipe dismissal; private update provider, persisted network job, real GitHub release/checksum fetch and APK validation; SAF log export updates one UTF-8 file\n");finish(-1,result);
  }catch(Throwable e){result.putString("stream","FAIL: "+e.getClass().getSimpleName()+": "+e.getMessage()+"\n");finish(1,result);}finally{store.clear();}}
  static final class RetryService extends AgentService {
   int observations;
