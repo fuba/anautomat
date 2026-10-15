@@ -11,6 +11,13 @@ public final class AutomationTest {
  static void check(boolean value){if(!value)throw new AssertionError();passed++;}
  static void reject(Work work)throws Exception{try{work.run();}catch(Exception e){passed++;return;}throw new AssertionError("Unsafe input accepted");}
  public static void main(String[] args)throws Exception{
+  check(WorkspacePolicy.macroName("check_display.star").equals("check_display.star"));
+  check(WorkspacePolicy.sourceBytes("def main():\n    return \"日本語 😀\"\n").length>30);
+  check(WorkspacePolicy.sourceBytes("a".repeat(32768)).length==32768);
+  for(String name:new String[]{"../secret.star","/tmp/a.star","a/b.star","a\\b.star","a%2fb.star","content://x",".star","x.STAR","x.star\n","a".repeat(65)+".star"})reject(()->WorkspacePolicy.macroName(name));
+  reject(()->WorkspacePolicy.sourceBytes(""));reject(()->WorkspacePolicy.sourceBytes("a".repeat(32769)));reject(()->WorkspacePolicy.sourceBytes("日".repeat(10923)));reject(()->WorkspacePolicy.sourceBytes("\ud800"));
+  check(Protocol.validateAction(new JSONObject().put("type","save_macro").put("reason","test").put("name","test.star").put("code","def main():\n    return 1\n"),100,100).getString("type").equals("save_macro"));
+  reject(()->Protocol.validateAction(new JSONObject().put("type","read_macro").put("reason","test").put("name","../escape.star"),100,100));
   reject(()->AutomationJson.object("{\"x\":"+"[".repeat(33)+"0"+"]".repeat(33)+"}",65536));
   reject(()->AutomationJson.check("{\"x\":1",65536));
   reject(()->AutomationJson.check("{'x':'\"','deep':"+"[".repeat(100)+"0"+"]".repeat(100)+",'close':'\"'}",65536));

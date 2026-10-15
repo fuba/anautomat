@@ -59,9 +59,9 @@
  <string name="sign_in_cancelled">Sign-in cancelled</string>
  <string name="stop_before_sign_in">Stop the goal before signing in</string>
  <string name="sign_in_start_failed">"Could not start sign-in: "</string>
- <string name="export_off">Auto-save off</string>
- <string name="choose_folder">Save folder</string>
- <string name="folder_access_failed">Could not obtain access to the save folder</string>
+ <string name="export_off">No workspace folder selected</string>
+ <string name="choose_folder">Workspace folder</string>
+ <string name="folder_access_failed">Could not obtain access to the workspace folder</string>
  <string name="new_goal">Switching to a new goal</string>
  <string name="voice_goal">Enter goal by voice</string>
  <string name="voice_input">Voice input</string>
@@ -81,7 +81,7 @@
  <string name="file_create_failed">Could not create the file</string>
  <string name="file_open_failed">Could not open the file</string>
  <string name="saved_prefix">"Saved: "</string>
- <string name="export_failed">Log save failed: check the save folder</string>
+ <string name="export_failed">Workspace save failed: check the selected folder</string>
  <string name="thinking">Thinking…</string>
  <string name="preparing_action">Preparing action</string>
  <string name="thinking_prefix">"Thinking: "</string>
@@ -133,4 +133,8 @@
  <string name="macro_completed">Macro completed: %1$d actions</string>
  <string name="macro_failed">Macro stopped: </string>
  <string name="open_source_notices">Open-source notices</string>
+ <string name="workspace_disconnect">Disconnect folder</string>
+ <string name="workspace_layout">runs/ · Logs, source and results\nmacros/ · Reusable Starlark programs</string>
+ <string name="workspace_failed">Workspace failed: </string>
+ <string name="workspace_completed">Workspace: </string>
 </resources>

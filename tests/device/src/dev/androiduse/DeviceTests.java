@@ -9,7 +9,7 @@ import org.json.JSONObject;
 public final class DeviceTests extends Instrumentation {
  public void onCreate(Bundle b){super.onCreate(b);start();}
  public void onStart(){Bundle result=new Bundle();SecureStore store=new SecureStore(getTargetContext(),"test-credentials.enc");try{
-  for(boolean enabled:new boolean[]{true,false}){JSONObject schema=DirectPlanner.schema(enabled);schemaContract(schema);org.json.JSONArray types=schema.getJSONObject("properties").getJSONObject("type").getJSONArray("enum");boolean present=false;for(int i=0;i<types.length();i++)present|=types.getString(i).equals("run_code");if(present!=enabled)throw new AssertionError("Code setting/schema mismatch");}
+  for(boolean enabled:new boolean[]{true,false}){JSONObject schema=DirectPlanner.schema(enabled);schemaContract(schema);org.json.JSONArray types=schema.getJSONObject("properties").getJSONObject("type").getJSONArray("enum");boolean present=false;for(int i=0;i<types.length();i++)present|=types.getString(i).equals("run_code");if(present!=enabled)throw new AssertionError("Code setting/schema mismatch");for(String tool:new String[]{"list_macros","read_macro","save_macro"}){boolean found=false;for(int i=0;i<types.length();i++)found|=types.getString(i).equals(tool);if(found!=enabled)throw new AssertionError("Workspace setting/schema mismatch");}}
   JSONObject original=new JSONObject().put("access_token","TEST_SECRET_DO_NOT_USE").put("refresh_token","TEST_REFRESH").put("expires_at",1234);
   store.write(original);JSONObject restored=new SecureStore(getTargetContext(),"test-credentials.enc").read();if(!original.toString().equals(restored.toString()))throw new AssertionError("Secure record round trip failed");
   File file=new File(getTargetContext().getNoBackupFilesDir(),"test-credentials.enc");byte[] bytes;try(FileInputStream in=new FileInputStream(file)){bytes=in.readAllBytes();}if(new String(bytes,"ISO-8859-1").contains("TEST_SECRET"))throw new AssertionError("Credentials stored in plaintext");
@@ -35,8 +35,8 @@ public final class DeviceTests extends Instrumentation {
   if(java.util.Arrays.asList(getContext().getAssets().list("")).contains("same-signer.apk")){
    File fixture=new File(getTargetContext().getCacheDir(),"test-update.apk");
    try{try(InputStream in=getContext().getAssets().open("same-signer.apk");OutputStream out=new FileOutputStream(fixture)){in.transferTo(out);}
-    JSONObject metadata=new JSONObject(new String(releaseBytes,java.nio.charset.StandardCharsets.UTF_8));metadata.put("tag_name","v1.1.1");
-    for(int i=0;i<metadata.getJSONArray("assets").length();i++){JSONObject asset=metadata.getJSONArray("assets").getJSONObject(i);asset.put("browser_download_url","https://github.com/fuba/anautomat/releases/download/v1.1.1/"+asset.getString("name"));}
+    JSONObject metadata=new JSONObject(new String(releaseBytes,java.nio.charset.StandardCharsets.UTF_8));metadata.put("tag_name","v1.2.1");
+    for(int i=0;i<metadata.getJSONArray("assets").length();i++){JSONObject asset=metadata.getJSONArray("assets").getJSONObject(i);asset.put("browser_download_url","https://github.com/fuba/anautomat/releases/download/v1.2.1/"+asset.getString("name"));}
     updates.verifyPackage(fixture,new UpdatePolicy(metadata));
     boolean rejectedVersion=false;try{updates.verifyPackage(fixture,latest);}catch(SecurityException expected){rejectedVersion=true;}if(!rejectedVersion)throw new AssertionError("Wrong APK version accepted");
     android.content.pm.PackageInfo apk=getTargetContext().getPackageManager().getPackageArchiveInfo(fixture.getAbsolutePath(),android.content.pm.PackageManager.GET_SIGNING_CERTIFICATES);
@@ -88,17 +88,8 @@ public final class DeviceTests extends Instrumentation {
   });
   android.os.SystemClock.sleep(5000);
   runOnMainSync(()->{RetryService service=retryService[0];try{if(service.observations!=1||retryService[1].observations!=0)throw new AssertionError("Cancelled retry replayed after pause or resume");}finally{service.running=false;service.handler.removeCallbacksAndMessages(null);if(service.planner!=null)service.planner.cancel();retryService[1].handler.removeCallbacksAndMessages(null);}});
-  if(!LogArchive.get(getTargetContext()).folder().isEmpty()){
-   LogArchive archive=new LogArchive(getTargetContext(),"test-archive.enc");android.net.Uri created=null;
-   try{
-    archive.begin("Log export test");archive.append("First line");archive.append("Continued line");archive.writer.submit(()->{}).get(15,java.util.concurrent.TimeUnit.SECONDS);
-    java.lang.reflect.Field field=LogArchive.class.getDeclaredField("document");field.setAccessible(true);created=android.net.Uri.parse((String)field.get(archive));
-    try(InputStream input=getTargetContext().getContentResolver().openInputStream(created)){String text=new String(input.readAllBytes(),java.nio.charset.StandardCharsets.UTF_8);if(!text.equals("First line\nContinued line\n"))throw new AssertionError("SAF snapshot lost or duplicated lines");}
-    archive.append("Finished");archive.writer.submit(()->{}).get(15,java.util.concurrent.TimeUnit.SECONDS);if(!created.toString().equals((String)field.get(archive)))throw new AssertionError("Continuation created a different file");
-    try(InputStream input=getTargetContext().getContentResolver().openInputStream(created)){if(!new String(input.readAllBytes(),java.nio.charset.StandardCharsets.UTF_8).endsWith("Finished\n"))throw new AssertionError("Final log missing");}
-   }finally{archive.writer.shutdown();if(created!=null)android.provider.DocumentsContract.deleteDocument(getTargetContext().getContentResolver(),created);new SecureStore(getTargetContext(),"test-archive.enc").clear();}
-  }
-  result.putString("stream","PASS: Android Keystore encryption, restart read, tamper rejection, deletion; live bidirectional GOAL sync and default 100 steps; English and Japanese resources; browser return routing; bounded retries and manual resume without stale callbacks; unified play/pause/continue/stop controls; bidirectional ticker swipe dismissal; private update provider, persisted network job, real GitHub release/checksum fetch and APK validation; SAF log export updates one UTF-8 file\n");finish(-1,result);
+  WorkspaceDeviceTests.run(getTargetContext());
+  result.putString("stream","PASS: Android Keystore encryption, restart read, tamper rejection, deletion; live bidirectional GOAL sync and default 100 steps; English and Japanese resources; browser return routing; bounded retries and manual resume without stale callbacks; unified play/pause/continue/stop controls; bidirectional ticker swipe dismissal; private update provider, persisted network job, real GitHub release/checksum fetch and APK validation; SAF workspace hierarchy, legacy log migration/restart, exact source/input/result archives, reusable macro persistence and storage rejection/cancellation\n");finish(-1,result);
  }catch(Throwable e){result.putString("stream","FAIL: "+e.getClass().getSimpleName()+": "+e.getMessage()+"\n");finish(1,result);}finally{store.clear();}}
  static final class RetryService extends AgentService {
   int observations;

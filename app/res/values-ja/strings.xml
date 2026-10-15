@@ -59,9 +59,9 @@
  <string name="sign_in_cancelled">サインインをキャンセルしました</string>
  <string name="stop_before_sign_in">Goal を停止してからサインインしてください</string>
  <string name="sign_in_start_failed">"サインインを開始できません: "</string>
- <string name="export_off">自動保存オフ</string>
- <string name="choose_folder">保存先フォルダー</string>
- <string name="folder_access_failed">保存先のアクセス権を取得できません</string>
+ <string name="export_off">作業フォルダー未選択</string>
+ <string name="choose_folder">作業フォルダー</string>
+ <string name="folder_access_failed">作業フォルダーのアクセス権を取得できません</string>
  <string name="new_goal">新しい Goal に切り替え</string>
  <string name="voice_goal">Goal を音声入力</string>
  <string name="voice_input">音声入力</string>
@@ -81,7 +81,7 @@
  <string name="file_create_failed">ファイルを作成できません</string>
  <string name="file_open_failed">ファイルを開けません</string>
  <string name="saved_prefix">"保存済み: "</string>
- <string name="export_failed">ログ保存失敗: 保存先を確認してください</string>
+ <string name="export_failed">ワークスペースへの保存に失敗: 保存先を確認してください</string>
  <string name="thinking">Thinking…</string>
  <string name="preparing_action">操作を準備中</string>
  <string name="thinking_prefix">"Thinking: "</string>
@@ -133,4 +133,8 @@
  <string name="macro_completed">マクロ完了: %1$d 操作</string>
  <string name="macro_failed">マクロ停止: </string>
  <string name="open_source_notices">オープンソースライセンス</string>
+ <string name="workspace_disconnect">フォルダーを解除</string>
+ <string name="workspace_layout">runs/ · ログ・コード・実行結果\nmacros/ · 再利用する Starlark プログラム</string>
+ <string name="workspace_failed">ワークスペース操作に失敗: </string>
+ <string name="workspace_completed">ワークスペース: </string>
 </resources>

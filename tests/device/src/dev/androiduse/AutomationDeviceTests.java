@@ -8,6 +8,7 @@ import org.json.*;
 
 /** Real isolated-process tests. No network, user actions, credentials, or external apps. */
 public final class AutomationDeviceTests extends Instrumentation {
+ static LogArchive testArchive;
  public void onCreate(Bundle state){super.onCreate(state);start();}
  JSONObject execute(String code,String state,boolean success)throws Exception{
   CountDownLatch done=new CountDownLatch(1);JSONObject[] result={null};String[] error={""};SandboxClient[] client={null};
@@ -17,6 +18,7 @@ public final class AutomationDeviceTests extends Instrumentation {
   if(!success&&(result[0]!=null||error[0].isEmpty()))throw new AssertionError("Unsafe program succeeded");return result[0];
  }
  public void onStart(){Bundle result=new Bundle();int code=-1;try{
+  testArchive=new LogArchive(getTargetContext(),"test-automation-workspace.enc");testArchive.begin("Automation workspace device test");testArchive.append("Controlled offline test");
   android.view.accessibility.AccessibilityNodeInfo guard=android.view.accessibility.AccessibilityNodeInfo.obtain();guard.setVisibleToUser(true);if(AgentService.visibleText(guard,"null",0,new int[1]))throw new AssertionError("Missing text satisfied a literal guard");guard.setText("null");if(!AgentService.visibleText(guard,"null",0,new int[1]))throw new AssertionError("Visible literal text guard failed");guard.setVisibleToUser(false);if(AgentService.visibleText(guard,"null",0,new int[1]))throw new AssertionError("Invisible text satisfied a guard");
   android.content.pm.ServiceInfo info=getTargetContext().getPackageManager().getServiceInfo(new ComponentName(getTargetContext(),SandboxService.class),0);
   if(info.exported||(info.flags&android.content.pm.ServiceInfo.FLAG_ISOLATED_PROCESS)==0)throw new AssertionError("Service is not private and isolated");
@@ -33,10 +35,11 @@ public final class AutomationDeviceTests extends Instrumentation {
   if(!observed.await(20,TimeUnit.SECONDS))throw new AssertionError("Sandbox-to-macro integration timed out");
   runOnMainSync(()->{Harness h=service[0];if(!h.actions.equals("text:text:press_enter:")||h.sandboxState.optInt("computed")!=42||h.observations!=1||h.macro!=null)throw new AssertionError("Sandbox macro/state integration failed");h.running=false;h.generation++;});
   runOnMainSync(()->{try{Harness h=new Harness();h.attach(getTargetContext());h.running=true;h.generation=1;h.screenWidth=900;h.screenHeight=1600;h.hold=true;h.runMacro(new MacroPlan(new JSONArray("[{type:'home'},{type:'back'}]"),900,1600),1);h.pauseGoal("test pause");h.pending.run();if(!h.actions.equals("home:")||!h.paused||h.macro!=null||h.history.optJSONObject(h.history.length()-1).optInt("completed")!=0)throw new AssertionError("Paused macro continued");h.running=false;h.generation++;}catch(Exception e){throw new RuntimeException(e);}});
+  libraryTests();
   targetTests(activity);
   runOnMainSync(activity::finish);
-  result.putString("stream","PASS: isolated UID process, on-device Starlark/UTF-8/JSON/state, unavailable API rejection, execution and memory limits, cancellation, code-to-macro execution, unique UI targets and pause without replay\n");
- }catch(Throwable e){code=1;result.putString("stream","FAIL: "+e.getClass().getSimpleName()+": "+e.getMessage()+"\n");}finish(code,result);}
+  result.putString("stream","PASS: isolated UID process, on-device Starlark/UTF-8/JSON/state, unavailable API rejection, execution and memory limits, cancellation, code-to-macro execution, saved macro reuse across Goals, unique UI targets and pause without replay\n");
+ }catch(Throwable e){code=1;result.putString("stream","FAIL: "+e.getClass().getSimpleName()+": "+e.getMessage()+"\n");}finally{try{cleanupArchive();}catch(Exception e){code=1;result.putString("stream","FAIL: test archive cleanup: "+e.getMessage()+"\n");}}finish(code,result);}
  void targetTests(Activity activity)throws Exception{
   android.widget.EditText[] field={null};android.widget.TextView[] outcome={null};
   runOnMainSync(()->{android.widget.LinearLayout layout=new android.widget.LinearLayout(activity);layout.setOrientation(1);layout.setPadding(24,64,24,24);
@@ -56,9 +59,37 @@ public final class AutomationDeviceTests extends Instrumentation {
   if(!done.await(20,TimeUnit.SECONDS))throw new AssertionError("Real Starlark target actions timed out");
   runOnMainSync(()->{if(!outcome[0].getText().toString().equals("PASS"))throw new AssertionError("Targeted fill/tap did not execute");service[0].running=false;service[0].generation++;});
  }
+ void cleanupArchive()throws Exception{
+  if(testArchive==null)return;testArchive.writer.submit(()->{}).get(20,TimeUnit.SECONDS);testArchive.writer.shutdown();testArchive.writer.awaitTermination(20,TimeUnit.SECONDS);
+  JSONObject saved=testArchive.store.read();if(saved!=null&&!testArchive.folder().isEmpty()){
+   WorkspaceFiles files=new WorkspaceFiles(getTargetContext().getContentResolver(),testArchive.folder());String run=saved.optString("run");
+   if(!run.contains("Automation workspace device test"))throw new AssertionError("Unexpected test archive path");
+   android.net.Uri document=files.child(files.runs(),run,WorkspaceFiles.DIR,false);if(document!=null)android.provider.DocumentsContract.deleteDocument(getTargetContext().getContentResolver(),document);
+  }testArchive.store.clear();
+ }
+ void libraryTests()throws Exception{
+  String name="library_test_"+java.util.UUID.randomUUID().toString().replace("-","")+".star";
+  String source="def main():\n    state[\"library\"] = input[\"n\"] * 7\n    ui.text(str(state[\"library\"]), app=\"dev.androiduse.tests\")\n    return state[\"library\"]\n";
+  WorkspaceFiles files=new WorkspaceFiles(getTargetContext().getContentResolver(),LogArchive.get(getTargetContext()).folder());Harness[] saving={null},reading={null};
+  try{
+   CountDownLatch saved=new CountDownLatch(1);runOnMainSync(()->{try{Harness h=new Harness();h.attach(getTargetContext());h.running=true;h.generation=1;h.done=saved;saving[0]=h;h.workspace(new JSONObject().put("type","save_macro").put("name",name).put("code",source),1);}catch(Exception e){throw new RuntimeException(e);}});
+   if(!saved.await(20,TimeUnit.SECONDS))throw new AssertionError("Library save did not complete");
+   runOnMainSync(()->{saving[0].running=false;saving[0].generation++;});
+   CountDownLatch loaded=new CountDownLatch(1);runOnMainSync(()->{try{Harness h=new Harness();h.attach(getTargetContext());h.running=true;h.generation=1;h.screenWidth=900;h.screenHeight=1600;h.done=loaded;reading[0]=h;h.workspace(new JSONObject().put("type","read_macro").put("name",name),1);}catch(Exception e){throw new RuntimeException(e);}});
+   if(!loaded.await(20,TimeUnit.SECONDS))throw new AssertionError("Library read in another Goal did not complete");
+   CountDownLatch ran=new CountDownLatch(1);runOnMainSync(()->{try{Harness h=reading[0];String code=h.history.getJSONObject(0).getJSONObject("result").getString("code");if(!source.equals(code)||!h.actions.isEmpty())throw new AssertionError("Reading a macro changed or executed it");h.done=ran;h.runCode(new JSONObject().put("code",code).put("input","{\"n\":6}"),1);}catch(Exception e){throw new RuntimeException(e);}});
+   if(!ran.await(20,TimeUnit.SECONDS))throw new AssertionError("Saved Starlark macro did not execute");
+   runOnMainSync(()->{Harness h=reading[0];if(h.sandboxState.optInt("library")!=42||!h.actions.equals("text:"))throw new AssertionError("Reused macro has incorrect state or operations");});
+  }finally{
+   runOnMainSync(()->{for(Harness h:new Harness[]{saving[0],reading[0]})if(h!=null){h.running=false;h.generation++;h.cancelAutomation("test cleanup");h.handler.removeCallbacksAndMessages(null);}});
+   testArchive.writer.submit(()->{}).get(20,TimeUnit.SECONDS);
+   android.net.Uri document=files.child(files.macros(),name,"text/plain",false);if(document!=null)android.provider.DocumentsContract.deleteDocument(getTargetContext().getContentResolver(),document);
+  }
+ }
  static final class RealHarness extends AgentService {
   android.app.UiAutomation automation;CountDownLatch done;
   void attach(Context context){attachBaseContext(context);}
+  @Override LogArchive archive(){return testArchive;}
   @Override void log(String text){}
   @Override void logSource(String code){}
   @Override public android.view.accessibility.AccessibilityNodeInfo getRootInActiveWindow(){return automation.getRootInActiveWindow();}
@@ -67,6 +98,7 @@ public final class AutomationDeviceTests extends Instrumentation {
  static final class Harness extends AgentService {
   String actions="";boolean hold;Runnable pending;int observations;CountDownLatch done;
   void attach(Context context){attachBaseContext(context);}
+  @Override LogArchive archive(){return testArchive;}
   @Override void log(String text){}
   @Override void logSource(String code){}
   @Override public android.view.accessibility.AccessibilityNodeInfo getRootInActiveWindow(){android.view.accessibility.AccessibilityNodeInfo node=android.view.accessibility.AccessibilityNodeInfo.obtain();node.setPackageName("dev.androiduse.tests");return node;}

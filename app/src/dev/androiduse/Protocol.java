@@ -51,6 +51,11 @@ public final class Protocol {
  }
  public static JSONObject validateAction(JSONObject action,int width,int height)throws Exception{
   String tool=action.getString("type");
+  if(tool.equals("list_macros")||tool.equals("read_macro")||tool.equals("save_macro")){
+   if(!(action.get("reason") instanceof String))throw new IOException("Invalid workspace reason");
+   if(!tool.equals("list_macros")){if(!(action.get("name") instanceof String))throw new IOException("Invalid macro name");WorkspacePolicy.macroName(action.getString("name"));}
+   if(tool.equals("save_macro")){if(!(action.get("code") instanceof String))throw new IOException("Invalid macro source");WorkspacePolicy.sourceBytes(action.getString("code"));}return action;
+  }
   if(tool.equals("run_code")){if(!(action.get("reason") instanceof String)||!(action.get("code") instanceof String)||action.getString("code").isEmpty()||action.getString("code").length()>SandboxEngine.MAX_CODE)throw new IOException("Invalid sandbox code");if(action.has("input")&&!action.isNull("input")&&(!(action.get("input") instanceof String)||action.getString("input").length()>SandboxEngine.MAX_INPUT))throw new IOException("Invalid sandbox input");return action;}
   if(tool.equals("macro")){if(!(action.get("reason") instanceof String))throw new IOException("Invalid macro reason");action.put("actions",new MacroPlan(action.getJSONArray("actions"),width,height).actions);return action;}
   return validatePrimitive(action,width,height);

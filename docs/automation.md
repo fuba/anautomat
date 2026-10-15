@@ -94,15 +94,52 @@ A computation-step limit does not bound the cost of one builtin operation. Execu
 
 The parent rechecks JSON bounds, state and the complete macro independently. A successful sandbox result cannot bypass the operation validator. Device operations still use the app's accessibility capabilities and require authorization by the user's Goal. Model instructions about sensitive actions are not a complete authorization enforcement system.
 
-Disable Starlark execution in Settings to remove `run_code` from the planner's schema. Disabling it during an invocation pauses the Goal and cancels the process. Macro and ordinary screen controls remain available.
+Disable Starlark execution in Settings to remove `run_code` and the library tools from the planner's schema. Disabling it during an invocation pauses the Goal and cancels the process. Macro and ordinary screen controls remain available.
 
-Generated source, logs and results appear in bounded encrypted app history and configured plain-text log exports. Exports can contain source and visible-screen data. Planner context retains up to 40 events / 256 KiB plus current state. Authentication credentials are never passed to the interpreter.
+Generated source, logs and results appear in bounded encrypted app history and configured workspace exports. Exports can contain source and visible-screen data. Planner context retains up to 40 events / 256 KiB plus current state. Authentication credentials are never passed to the interpreter.
+
+## Workspace and reusable macros
+
+Choose **Workspace folder** in the app. The existing folder selection is retained on upgrade. anautomat uses Android's persisted Storage Access Framework grant; it does not request broad storage permission. The layout is:
+
+```text
+<selected folder>/
+  runs/
+    2026-10-16_12-30-00-123_Check display_a1b2c3d4/
+      log.txt
+      steps/
+        step-0003-9f8e7d6c.star
+        step-0003-9f8e7d6c.input.json
+        step-0003-9f8e7d6c.result.json
+        step-0003-9f8e7d6c.macro.json
+        step-0003-9f8e7d6c.execution.json
+  macros/
+    check_display.star
+```
+
+Run names contain the start time in Asia/Tokyo, a sanitized Goal summary and a random suffix. `log.txt` is updated throughout the Goal; pause, resume and continuation keep the same run. Original root-level `.txt` exports remain intact. A pre-upgrade current archive is copied into the new layout when next exported; historical files are not moved or deleted. Encrypted private snapshots continue to recover the current log after app restart.
+
+Source and input are queued for export before sandbox invocation. A successful result records returned data, state, logs and queued actions; failed/cancelled invocations record their status when the callback or cancellation is handled. A generated macro has a separate validated plan and execution record, including partial completion/cancellation. A completed program result does **not** mean the macro completed: check `.execution.json`. Standalone macro batches also produce plan/execution files. Source preserves exact Unicode, indentation and blank lines. These artifacts are written on an ordered background worker. They are exported only while a workspace is selected; unavailable providers or process termination can leave an incomplete export. The private log remains available, but older sidecars are not reconstructed when selecting a folder later.
+
+The planner can use three app-side tools while Starlark execution is enabled:
+
+| Tool | Arguments | Behavior |
+| --- | --- | --- |
+| `list_macros` | None | Sorted saved `.star` names, at most 256 |
+| `read_macro` | `name` | Read one UTF-8 program, at most 32,768 bytes |
+| `save_macro` | `name`, `code` | Create a new reusable program; existing names are rejected |
+
+Names match `[a-z0-9][a-z0-9_-]{0,63}.star`, for example `check_display.star`. Paths, parent traversal, URIs and malformed Unicode are rejected. The app lists at most 4,096 documents per directory and rejects duplicate names, document type conflicts and virtual documents when opening a target. Large or invalid externally edited programs fail before execution. Existing macros may be managed with a file manager; anautomat does not overwrite or delete library files.
+
+For example, ask: “Save this as check_display.star for reuse,” then in a later Goal: “Read check_display.star and use it to check the display.” The planner reads and inspects the source against the new Goal/current screen, then calls the ordinary `run_code` tool with that source and suitable JSON input. Saved files never execute automatically, and cannot authorize operations. The isolated interpreter still has **no filesystem access**, URI, Android object or file callback. Reading/saving files happens in the app process under the selected tree. A pause cancels queued storage work; a provider write already in progress may finish, while its stale callback cannot continue the Goal.
+
+**Disconnect folder** disables exports and library access without deleting files. Local history remains encrypted; workspace logs, programs, inputs and results are ordinary readable files. Do not store credentials in reusable programs or input data.
 
 ## Build and validation
 
 `security/go.lock.json` records exact module versions, upstream publication times, archive/module SHA-256 hashes and Go checksum-database records. The pinned Go SDK is covered by `security/dependencies.lock.json`. Downloads require the existing seven-day cooldown and advisory checks. Go builds use a local file proxy, a local-only toolchain and disabled VCS resolution. SDK/NDK packages must already be installed. The Go SDK archive remains unchanged. A repository-pinned source patch corrects two pointer format specifiers in the Android cgo thread local storage diagnostic. The patch manifest and the complete source file before/after application have SHA-256 pins; unexpected source, context or output fails the build. The C/C++ high-severity gate remains enabled. Third-party notices are included in the app.
 
-`scripts/test.ps1` runs the protocol/macro tests plus real Starlark programs, rejected host access, quotas, immutable inputs, JSON cycles/alias expansion and Unicode checks. `scripts/test-device.ps1` checks the isolated process, native UTF-8 boundary, execution/memory pressure, cancellation, real label-based fill/click operations and pause without replay.
+`scripts/test.ps1` runs the protocol/macro tests plus real Starlark programs, rejected host access, quotas, immutable inputs, JSON cycles/alias expansion and Unicode checks. With Starlark enabled and a test workspace selected in the emulator, `scripts/test-device.ps1` checks the isolated process, native UTF-8 boundary, execution/memory pressure, cancellation, real label-based fill/click operations and pause without replay. It also exercises real SAF migration/restart, exact source sidecars, invalid/oversize external files, rejected overwrites, cancelled/disabled storage requests and saved-program reuse across separate Goals. Test-owned runs and library files are removed afterward.
 
 The opt-in live model fixture is an offline test Activity, never packaged in anautomat. `scripts/test-device.ps1 -PrepareGoal` preserves the user's draft and configures a sum-of-squares Goal. Open `dev.androiduse.tests/dev.androiduse.AutomationFixture` and start that Goal through the floating controls. The expected result is `PASS: 338350`. Run `scripts/test-device.ps1 -RestoreGoal` afterward. The task authorizes only the fixture screen; its planner uses the normal ChatGPT connection.
 

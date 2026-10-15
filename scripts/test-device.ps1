@@ -13,7 +13,7 @@ $testClasses=Join-Path $testCompile 'classes';$testDex=Join-Path $testCompile 'd
 New-Item -ItemType Directory -Force $testClasses,$testDex | Out-Null
 $assetArgs=@();if(Test-Path build/update-test-assets){$assetArgs=@('-A','build/update-test-assets')}
 Run "$bt\aapt2.exe" (@('link','-o','build/device-tests/base.apk','--manifest','tests/device/AndroidManifest.xml','-I',"$sdk/platforms/android-36/android.jar")+$assetArgs)
-Run "$jdk\bin\javac.exe" @('-encoding','UTF-8','-source','11','-target','11','-cp',"$sdk/platforms/android-36/android.jar;$appClasses",'-d',$testClasses,'tests/device/src/dev/androiduse/DeviceTests.java','tests/device/src/dev/androiduse/AutomationDeviceTests.java','tests/device/src/dev/androiduse/AutomationFixture.java','tests/device/src/dev/androiduse/AutomationGoalSetup.java','tests/device/src/dev/androiduse/UiTargetTests.java')
+Run "$jdk\bin\javac.exe" @('-encoding','UTF-8','-source','11','-target','11','-cp',"$sdk/platforms/android-36/android.jar;$appClasses",'-d',$testClasses,'tests/device/src/dev/androiduse/DeviceTests.java','tests/device/src/dev/androiduse/WorkspaceDeviceTests.java','tests/device/src/dev/androiduse/AutomationDeviceTests.java','tests/device/src/dev/androiduse/AutomationFixture.java','tests/device/src/dev/androiduse/AutomationGoalSetup.java','tests/device/src/dev/androiduse/UiTargetTests.java')
 Run "$jdk\bin\jar.exe" @('cf','build/device-tests/classes.jar','-C',$testClasses,'.')
 Run "$bt\d8.bat" @('--lib',"$sdk/platforms/android-36/android.jar",'--min-api','30','--output',$testDex,'build/device-tests/classes.jar')
 Run "$jdk\bin\jar.exe" @('uf','build/device-tests/base.apk','-C',$testDex,'classes.dex')

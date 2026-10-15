@@ -77,7 +77,7 @@ Repository documentation, comments, workflows and release notes are written in E
 
 The LOG text area supports scrolling, selection and copying. It uses one line break per entry. Auto-scroll follows new entries only when you are already at the bottom. The on-screen history retains up to 500 entries or 150,000 JSON characters and is encrypted in app-private storage.
 
-Choose **Save folder** to enable automatic UTF-8 text export using Android's Storage Access Framework. The selection persists across restarts. Each new goal gets a name such as:
+- Choose a **Workspace folder** to keep each Goal in `runs/<time + summary>/`: compact logs, exact Starlark source, inputs, results and macro execution records. Store reusable programs in `macros/`; ask anautomat to save, list or read one for a later Goal. Existing folder settings and old exports are retained. See [workspace details](docs/automation.md#workspace-and-reusable-macros).
 
 ```
 2026-10-15_16-55-00-123_Open Settings.txt
