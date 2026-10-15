@@ -100,7 +100,7 @@ Generated source, logs and results appear in bounded encrypted app history and c
 
 ## Build and validation
 
-`security/go.lock.json` records exact module versions, upstream publication times, archive/module SHA-256 hashes and Go checksum-database records. The pinned Go SDK is covered by `security/dependencies.lock.json`. Downloads require the existing seven-day cooldown and advisory checks. Go builds use a local file proxy, a local-only toolchain and disabled VCS resolution. SDK/NDK packages must already be installed. Third-party notices are included in the app.
+`security/go.lock.json` records exact module versions, upstream publication times, archive/module SHA-256 hashes and Go checksum-database records. The pinned Go SDK is covered by `security/dependencies.lock.json`. Downloads require the existing seven-day cooldown and advisory checks. Go builds use a local file proxy, a local-only toolchain and disabled VCS resolution. SDK/NDK packages must already be installed. The Go SDK archive remains unchanged. A repository-pinned source patch corrects two pointer format specifiers in the Android cgo thread local storage diagnostic. The patch manifest and the complete source file before/after application have SHA-256 pins; unexpected source, context or output fails the build. The C/C++ high-severity gate remains enabled. Third-party notices are included in the app.
 
 `scripts/test.ps1` runs the protocol/macro tests plus real Starlark programs, rejected host access, quotas, immutable inputs, JSON cycles/alias expansion and Unicode checks. `scripts/test-device.ps1` checks the isolated process, native UTF-8 boundary, execution/memory pressure, cancellation, real label-based fill/click operations and pause without replay.
 

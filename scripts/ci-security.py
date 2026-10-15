@@ -109,6 +109,7 @@ def check_download(item, days):
         if asset["browser_download_url"] != item["url"] or asset.get("digest") != "sha256:" + item["sha256"]:
             raise ValueError(f"Upstream asset changed: {item['name']}")
     elif item.get("kind") == "go_sdk":
+        go_runtime_patch_manifest(item)
         expected = "https://go.dev/dl/" + item["version"] + ".windows-amd64.zip"
         if item["url"] != expected or item["asset"] != expected.rsplit("/", 1)[1]:
             raise ValueError("Unexpected Go SDK URL")
@@ -131,6 +132,16 @@ def check_download(item, days):
             if not modified or timestamp(modified) != timestamp(item["published_at"]):
                 raise ValueError("Maven publication metadata changed or is missing")
             aged(modified, days)
+
+
+def go_runtime_patch_manifest(item):
+    path = (ROOT / item["patch_manifest"]).resolve()
+    if not path.is_relative_to((ROOT / "security/patches").resolve()) or digest(path) != item["patch_manifest_sha256"]:
+        raise ValueError("Go runtime patch manifest integrity failure")
+    manifest = json.loads(path.read_text(encoding="utf-8"))
+    if manifest["version"] != item["version"] or not manifest["patches"]:
+        raise ValueError("Go runtime patch version mismatch")
+    return manifest
 
 
 def verify(data):

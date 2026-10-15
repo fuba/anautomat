@@ -47,7 +47,7 @@ The screenshot contains only the test fixture and the floating control. The test
 
 - 119 JVM protocol/authentication/response/usage checks and 42 host JSON, guarded-target and macro ordering/cancellation checks passed.
 - Real Starlark execution tests cover state, readonly inputs, queued operation copies, numeric precision, Unicode, unavailable APIs, recursion/loop restrictions, computation quotas and bounded/cyclic output. A 10-second JSON conversion fuzz run exercised 65,776 inputs.
-- 18 security-gate regression tests passed, including Go module/checksum-database pinning and ELF ABI/hardening failures. Publication age, integrity metadata and GitHub advisory checks passed for the new dependencies and Go toolchain.
+- 20 security-gate regression tests passed, including Go module/checksum-database pinning and ELF ABI/hardening failures. Publication age, integrity metadata and GitHub advisory checks passed for the new dependencies and Go toolchain.
 - Native Android tests passed for the isolated service, UTF-8 JNI boundary including emoji and NUL, unavailable host APIs, computation/memory pressure, child recovery, cancellation, real label-based fill/click operations and pause without replay. Existing Keystore, GOAL synchronization, locale, retry, controls, ticker, SAF export and updater tests also passed.
 - All four APK ABIs were built and checked for 16 KiB alignment, NX stack, no writable/executable segments, no text relocations and full RELRO. Device execution was tested on the x86_64 Android 36.1 emulator; the other ABIs were build-validated.
 

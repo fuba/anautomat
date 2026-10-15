@@ -16,6 +16,28 @@ security = go_security.helpers()
 
 
 class GoSecurityTests(unittest.TestCase):
+    def test_runtime_patch_is_exact_idempotent_and_fails_closed(self):
+        before, after = b'void test() { printf("%ld", ptr); }\n', b'void test() { printf("%p", ptr); }\n'
+        patch_data = {"file": "src/runtime/cgo/test.c", "before": "%ld", "after": "%p", "before_sha256": hashlib.sha256(before).hexdigest(), "after_sha256": hashlib.sha256(after).hexdigest()}
+        with tempfile.TemporaryDirectory() as folder:
+            target = Path(folder, patch_data["file"])
+            target.parent.mkdir(parents=True)
+            target.write_bytes(before)
+            go_security.patch_file(folder, patch_data)
+            self.assertEqual(target.read_bytes(), after)
+            go_security.patch_file(folder, patch_data)
+            for change in ({"file": "../outside.c"}, {"before_sha256": "0" * 64}, {"after_sha256": "0" * 64}, {"before": "missing"}):
+                target.write_bytes(before)
+                with self.assertRaises(ValueError):
+                    go_security.patch_file(folder, {**patch_data, **change})
+                self.assertEqual(target.read_bytes(), before)
+
+    def test_runtime_patch_manifest_integrity_is_checked(self):
+        item = next(i for i in security.load()["downloads"] if i.get("kind") == "go_sdk")
+        security.go_runtime_patch_manifest(item)
+        with self.assertRaisesRegex(ValueError, "integrity"):
+            security.go_runtime_patch_manifest({**item, "patch_manifest_sha256": "0" * 64})
+
     def test_reviewed_manifest_and_sums_are_consistent(self):
         self.assertGreater(len(go_security.load()["modules"]), 0)
 

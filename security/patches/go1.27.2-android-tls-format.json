@@ -1,0 +1,13 @@
+{
+  "version": "go1.27.2",
+  "reason": "Use pointer format specifiers for void pointers in the Android TLS initialization diagnostic; keep the CodeQL high-severity gate enabled.",
+  "patches": [
+    {
+      "file": "src/runtime/cgo/gcc_android.c",
+      "before_sha256": "da8f44a12e6817cf408520e40bf83ac99ef6ab871a67a278842564fd34a09a43",
+      "after_sha256": "5ab577cd2202b5d80b9ad50c8b04c129c06c3b29672e243a0a71c07093e2cde9",
+      "before": "fatalf(\"tlsg offset wrong, got %ld want %ld\\n\", *tlsg, off);",
+      "after": "fatalf(\"tlsg offset wrong, got %p want %p\\n\", *tlsg, off);"
+    }
+  ]
+}

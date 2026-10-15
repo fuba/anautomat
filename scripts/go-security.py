@@ -101,11 +101,45 @@ def run(command):
     print("PASS: Go " + command + " (pinned modules, cooldown and checksum database)")
 
 
+def patch_file(sdk_root, patch):
+    root = Path(sdk_root).resolve()
+    relative = Path(patch["file"])
+    target = (root / relative).resolve()
+    if not target.is_relative_to(root / "src/runtime/cgo") or target.suffix != ".c":
+        raise ValueError("Go runtime patch path is outside its allowed source directory")
+    original = target.read_bytes()
+    checksum = hashlib.sha256(original).hexdigest()
+    if checksum == patch["after_sha256"]:
+        return
+    if checksum != patch["before_sha256"]:
+        raise ValueError("Go runtime patch source checksum mismatch")
+    before, after = patch["before"].encode("utf-8"), patch["after"].encode("utf-8")
+    if not before or original.count(before) != 1:
+        raise ValueError("Go runtime patch context mismatch")
+    updated = original.replace(before, after)
+    if hashlib.sha256(updated).hexdigest() != patch["after_sha256"]:
+        raise ValueError("Go runtime patch output checksum mismatch")
+    target.write_bytes(updated)
+
+
+def patch_sdk(folder):
+    security = helpers()
+    item = next(i for i in security.load()["downloads"] if i.get("kind") == "go_sdk")
+    security.aged(item["published_at"], security.load()["cooldown_days"])
+    manifest = security.go_runtime_patch_manifest(item)
+    for patch in manifest["patches"]:
+        patch_file(folder, patch)
+    print("PASS: pinned Go runtime source patch (input/context/output checksums)")
+
+
 if __name__ == "__main__":
     try:
-        if len(sys.argv) != 2 or sys.argv[1] not in ("verify", "download", "audit"):
+        if len(sys.argv) == 3 and sys.argv[1] == "patch-sdk":
+            patch_sdk(sys.argv[2])
+        elif len(sys.argv) != 2 or sys.argv[1] not in ("verify", "download", "audit"):
             raise ValueError("Expected verify, download or audit")
-        run(sys.argv[1])
+        else:
+            run(sys.argv[1])
     except Exception as error:
         print("GO SECURITY CHECK FAILED:", error, file=sys.stderr)
         sys.exit(1)

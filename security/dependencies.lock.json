@@ -72,7 +72,9 @@
       "published_at": "Thu, 08 Oct 2026 15:40:36 GMT",
       "sha256": "1314008898bd40df77af4b014f777f08873dbdfbcd3d92308728ee03304fe04f",
       "url": "https://go.dev/dl/go1.27.2.windows-amd64.zip",
-      "asset": "go1.27.2.windows-amd64.zip"
+      "asset": "go1.27.2.windows-amd64.zip",
+      "patch_manifest": "security/patches/go1.27.2-android-tls-format.json",
+      "patch_manifest_sha256": "95f49f08e80bd5ec11ac2572c59b9143c57bd33cefccd972e577567d22c2eebd"
     }
   ]
 }

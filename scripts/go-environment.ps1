@@ -7,6 +7,8 @@ if($LASTEXITCODE -ne 0){throw 'Verified Go SDK download failed'}
 if($LASTEXITCODE -ne 0){throw 'Verified Go module mirror failed'}
 $goPin=(Get-Content "$goRoot/security/dependencies.lock.json" -Raw | ConvertFrom-Json).downloads | Where-Object name -eq 'go-sdk'
 $go=Join-Path $goRoot ("build/tools/go-sdk-"+$goPin.version+'-'+$goPin.sha256.Substring(0,16)+'/go/bin/go.exe')
+& $python "$PSScriptRoot/go-security.py" patch-sdk (Split-Path (Split-Path $go))
+if($LASTEXITCODE -ne 0){throw 'Pinned Go runtime patch failed'}
 $env:GOTOOLCHAIN='local'
 $env:GOPROXY=([Uri](Join-Path $goRoot 'build/go-proxy')).AbsoluteUri
 $env:GOSUMDB='off'
