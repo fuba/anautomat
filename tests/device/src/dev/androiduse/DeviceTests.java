@@ -9,6 +9,7 @@ import org.json.JSONObject;
 public final class DeviceTests extends Instrumentation {
  public void onCreate(Bundle b){super.onCreate(b);start();}
  public void onStart(){Bundle result=new Bundle();SecureStore store=new SecureStore(getTargetContext(),"test-credentials.enc");try{
+  for(boolean enabled:new boolean[]{true,false}){JSONObject schema=DirectPlanner.schema(enabled);schemaContract(schema);org.json.JSONArray types=schema.getJSONObject("properties").getJSONObject("type").getJSONArray("enum");boolean present=false;for(int i=0;i<types.length();i++)present|=types.getString(i).equals("run_code");if(present!=enabled)throw new AssertionError("Code setting/schema mismatch");}
   JSONObject original=new JSONObject().put("access_token","TEST_SECRET_DO_NOT_USE").put("refresh_token","TEST_REFRESH").put("expires_at",1234);
   store.write(original);JSONObject restored=new SecureStore(getTargetContext(),"test-credentials.enc").read();if(!original.toString().equals(restored.toString()))throw new AssertionError("Secure record round trip failed");
   File file=new File(getTargetContext().getNoBackupFilesDir(),"test-credentials.enc");byte[] bytes;try(FileInputStream in=new FileInputStream(file)){bytes=in.readAllBytes();}if(new String(bytes,"ISO-8859-1").contains("TEST_SECRET"))throw new AssertionError("Credentials stored in plaintext");
@@ -34,8 +35,8 @@ public final class DeviceTests extends Instrumentation {
   if(java.util.Arrays.asList(getContext().getAssets().list("")).contains("same-signer.apk")){
    File fixture=new File(getTargetContext().getCacheDir(),"test-update.apk");
    try{try(InputStream in=getContext().getAssets().open("same-signer.apk");OutputStream out=new FileOutputStream(fixture)){in.transferTo(out);}
-    JSONObject metadata=new JSONObject(new String(releaseBytes,java.nio.charset.StandardCharsets.UTF_8));metadata.put("tag_name","v1.0.1");
-    for(int i=0;i<metadata.getJSONArray("assets").length();i++){JSONObject asset=metadata.getJSONArray("assets").getJSONObject(i);asset.put("browser_download_url","https://github.com/fuba/anautomat/releases/download/v1.0.1/"+asset.getString("name"));}
+    JSONObject metadata=new JSONObject(new String(releaseBytes,java.nio.charset.StandardCharsets.UTF_8));metadata.put("tag_name","v1.1.1");
+    for(int i=0;i<metadata.getJSONArray("assets").length();i++){JSONObject asset=metadata.getJSONArray("assets").getJSONObject(i);asset.put("browser_download_url","https://github.com/fuba/anautomat/releases/download/v1.1.1/"+asset.getString("name"));}
     updates.verifyPackage(fixture,new UpdatePolicy(metadata));
     boolean rejectedVersion=false;try{updates.verifyPackage(fixture,latest);}catch(SecurityException expected){rejectedVersion=true;}if(!rejectedVersion)throw new AssertionError("Wrong APK version accepted");
     android.content.pm.PackageInfo apk=getTargetContext().getPackageManager().getPackageArchiveInfo(fixture.getAbsolutePath(),android.content.pm.PackageManager.GET_SIGNING_CERTIFICATES);
@@ -106,6 +107,10 @@ public final class DeviceTests extends Instrumentation {
   @Override void log(String message){}
  }
 
+ static void schemaContract(JSONObject schema)throws Exception{
+  JSONObject properties=schema.optJSONObject("properties");if(properties!=null){java.util.Set<String> keys=new java.util.HashSet<>();java.util.Iterator<String> names=properties.keys();while(names.hasNext())keys.add(names.next());org.json.JSONArray required=schema.getJSONArray("required");java.util.Set<String> fields=new java.util.HashSet<>();for(int i=0;i<required.length();i++)fields.add(required.getString(i));if(!keys.equals(fields)||schema.getBoolean("additionalProperties"))throw new AssertionError("Invalid strict object schema");for(String name:keys)schemaContract(properties.getJSONObject(name));}
+  JSONObject items=schema.optJSONObject("items");if(items!=null)schemaContract(items);
+ }
  static final class ControlService extends AgentService {
   int starts,pauses,resumes,continues,stops;
   void attach(android.content.Context context){attachBaseContext(context);}

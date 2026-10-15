@@ -1,0 +1,91 @@
+{
+  "cooldown_days": 7,
+  "modules": [
+    {
+      "module": "github.com/chzyer/logex",
+      "version": "v1.2.1",
+      "published_at": "2022-04-24T13:13:51Z",
+      "sha256": "8bc36e064d4f53348c25a5745bd3a9030e3710c7083407da632905114d878bae",
+      "go_mod_sha256": "c9133edf3ffc200bdfeb056da30903c2c065e4c3f18c6ed2e03de657d6bf0812",
+      "sum": "h1:XHDu3E6q+gdHgsdTPH6ImJMIp436vR6MPtH8gP05QzM=",
+      "go_mod_sum": "h1:JLbx6lG2kDbNRFnfkgvh4eRJRPX1QCoOIWomwysCBrQ="
+    },
+    {
+      "module": "github.com/chzyer/readline",
+      "version": "v1.5.1",
+      "published_at": "2022-07-15T12:48:48Z",
+      "sha256": "ce25854a8beae5c20bdde840d5142e6fbd1f86f0e58442705b8fb21dfce48501",
+      "go_mod_sha256": "40b07659685e93f0e52ca42a8096117f81a3799f71e989c92d0108fa1c2ed90e",
+      "sum": "h1:upd/6fQk4src78LMRzh5vItIt361/o4uq553V8B5sGI=",
+      "go_mod_sum": "h1:Eh+b79XXUwfKfcPLepksvw2tcLE/Ct21YObkaSkeBlk="
+    },
+    {
+      "module": "github.com/chzyer/test",
+      "version": "v1.0.0",
+      "published_at": "2022-04-24T13:19:37Z",
+      "sha256": "4025a598a01e950ee44ba078b493e61e527dad8171b6ba10b7ae30371dbc630a",
+      "go_mod_sha256": "7b0e1c7b009a0cb18d7e45ca3ca615014bf14e96c3bbdff5f47fffda51bd1a2c",
+      "sum": "h1:p3BQDXSxOhOG0P9z6/hGnII4LGiEPOYBhs8asl/fC04=",
+      "go_mod_sum": "h1:2JlltgoNkt4TW/z9V/IzDdFaMTM2JPIi26O1pF38GC8="
+    },
+    {
+      "module": "github.com/golang/protobuf",
+      "version": "v1.5.0",
+      "published_at": "2021-03-18T00:15:31Z",
+      "sha256": "deb3b2ac476a7f74685091fa60c59d50110c7e1d333ea78281422d8441f2411d",
+      "go_mod_sha256": "738cbb1de96b67a6238ac3b8081cd8b1bfb0daebcf6c9bbe8cbdb6d73baecd19",
+      "sum": "h1:LUVKkCeviFUMKqHa4tXIIij/lbhnMbP7Fn5wKdKkRh4=",
+      "go_mod_sum": "h1:FsONVRAS9T7sI+LIUmWTfcYkHO4aIWwzhcaSAoJOfIk="
+    },
+    {
+      "module": "github.com/google/go-cmp",
+      "version": "v0.7.0",
+      "published_at": "2025-01-14T18:15:44Z",
+      "sha256": "64a9ce046f2c320e3783fba0d1f4a15f8a18f0b009b67bf27f7630919db3f539",
+      "go_mod_sha256": "31c874a1d2a18e62b0550f823ce7a575c8dec7f8fd9d4fa1959bb12d7f7c0f14",
+      "sum": "h1:wk8382ETsv4JYUZwIsn6YpYiWiBsYLSJiTsyBybVuN8=",
+      "go_mod_sum": "h1:pXiqmnSA92OHEEa9HXL2W4E7lf9JzCmGVUdgjX3N/iU=",
+      "commit": "9b12f366a942ebc7254abc7f32ca05068b455fb7"
+    },
+    {
+      "module": "go.starlark.net",
+      "version": "v0.0.0-20261005163335-bcb1a1a55bf9",
+      "published_at": "2026-10-05T16:33:35Z",
+      "sha256": "f7803b07c976ddcb2d22f1fa5526ccc6f05fbb97e371e48733625eba0f9431a8",
+      "go_mod_sha256": "80c78d7e4a6910fc28f9145c085f7071c3e087743a3f860dde31cb0b9e43bd50",
+      "sum": "h1:4VVDUeX0KRm+NfetZh9/JNrFQLzTS+jZiVMzhnt5/dg=",
+      "go_mod_sum": "h1:Iue6g6iirlfLoVi/DYCi5/x0h/bAOuWF3dULTKpt2Vo=",
+      "commit": "bcb1a1a55bf90eb528261c9a4fe51b6df41a64ee"
+    },
+    {
+      "module": "golang.org/x/sys",
+      "version": "v0.42.0",
+      "published_at": "2026-03-03T01:51:03Z",
+      "sha256": "99df0ad90183debc80aee0b7489648574c6baa0c1cf5da37aaf591cf2e2d426a",
+      "go_mod_sha256": "57f4393ea18d5446a12363b35c23a616d843fa1669c7121a70a2bc3a9677d665",
+      "sum": "h1:omrd2nAlyT5ESRdCLYdm3+fMfNFE/+Rf4bDIQImRJeo=",
+      "go_mod_sum": "h1:4GL1E5IUh+htKOUEOaiffhrAeqysfVGipDYzABqnCmw=",
+      "commit": "eaaaaee1dc1aacededf4a89bc4544558f425d5f1"
+    },
+    {
+      "module": "golang.org/x/term",
+      "version": "v0.41.0",
+      "published_at": "2026-03-10T01:43:14Z",
+      "sha256": "91ca75a3f454d5ddede1f58c3e4fc8e169c6f3c037223ac0ac76e78234d22828",
+      "go_mod_sha256": "8968a07ab4c1df34f4b7e9b76fe819957f295e8f796096828bdb085233478bb3",
+      "sum": "h1:QCgPso/Q3RTJx2Th4bDLqML4W6iJiaXFq2/ftQF13YU=",
+      "go_mod_sum": "h1:3pfBgksrReYfZ5lvYM0kSO0LIkAl4Yl2bXOkKP7Ec2A=",
+      "commit": "9d2dc074d2bdcb2229cbbaa0a252eace245a6489"
+    },
+    {
+      "module": "google.golang.org/protobuf",
+      "version": "v1.36.11",
+      "published_at": "2025-12-12T08:48:31Z",
+      "sha256": "14983d36c56a814ed91b6d652f2b8f895baba1b84eb43b28a0b132c8637cd274",
+      "go_mod_sha256": "a75c105a852fbd8da8d8cfac09c2eab9a206cfd27ed37c973737e23f632ca96e",
+      "sum": "h1:fV6ZwhNocDyBLK0dj+fg8ektcVegBBuEolpbTQyBNVE=",
+      "go_mod_sum": "h1:HTf+CrKn2C3g5S8VImy6tdcUvCska2kB7j23XfzDpco=",
+      "commit": "96a179180f0ad6bba9b1e7b6e38d0affb0168e9a"
+    }
+  ]
+}

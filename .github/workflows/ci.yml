@@ -61,7 +61,7 @@ jobs:
         run: |
           & build/tools/actionlint/actionlint.exe -color -shellcheck='' -pyflakes=''
           if ($LASTEXITCODE -ne 0) { throw 'Workflow lint failed' }
-      - name: JVM protocol and agent-state tests
+      - name: JVM protocol, macro and Starlark tests
         run: ./scripts/test.ps1
       - name: Build development APK
         run: ./scripts/build.ps1
@@ -93,6 +93,10 @@ jobs:
             build-mode: none
           - language: actions
             build-mode: none
+          - language: go
+            build-mode: manual
+          - language: c-cpp
+            build-mode: manual
     defaults:
       run:
         shell: pwsh
@@ -128,6 +132,12 @@ jobs:
       - name: Build Java sources for analysis
         if: matrix.language == 'java-kotlin'
         run: ./scripts/build.ps1
+      - name: Build Starlark sources for analysis
+        if: matrix.language == 'go'
+        run: ./scripts/analyze-starlark.ps1
+      - name: Build native JNI boundary for analysis
+        if: matrix.language == 'c-cpp'
+        run: ./scripts/build-native.ps1
       - name: Analyze CodeQL
         uses: github/codeql-action/analyze@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2
         with:

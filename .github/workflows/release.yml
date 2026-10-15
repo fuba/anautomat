@@ -19,7 +19,7 @@ jobs:
     name: Sign and publish APK
     needs: checks
     runs-on: windows-2025
-    timeout-minutes: 20
+    timeout-minutes: 40
     permissions:
       contents: write
       id-token: write

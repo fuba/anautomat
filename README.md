@@ -14,9 +14,21 @@ The video shows a real emulator run. The 54-second edit labels accelerated secti
 
 ## Code and macros
 
-The agent can write restricted **Java 8** code, compile it on the phone, and use its result in a Goal. Code runs in a fresh permissionless Android process with API allowlisting and build/execution limits. JSON state, calculations, strings, collections, dates, hashing and code-generated device macros are supported. No JavaScript runtime, PC bridge or on-device JDK installation is needed.
+The agent writes **Starlark**: short, Python-like programs that run entirely on the phone. anautomat supplies `ui.fill("Result", value)`, `ui.tap("Verify")` and other guarded operation APIs. The interpreter receives data and queues operations in a fresh permissionless Android process. No compiler, PC bridge or runtime download is needed on the phone.
 
-Macros execute up to 32 validated operations sequentially without a model request between each operation. Touch/text steps require an app-package guard and may check visible text. Pause or failure discards the remaining batch; manual resume takes a fresh screenshot. Disable Java execution in Settings when it is not needed. [Tool APIs, limits and security boundaries](docs/automation.md) · [On-device test evidence](docs/automation-evidence.md).
+```python
+def main():
+    total = 0
+    for n in range(1, 101):
+        total += n * n
+    ui.fill("Result", str(total))
+    ui.tap("Verify")
+    return total
+```
+
+This program completed the offline Android smoke test in two model steps. [Exact run and screenshot](docs/automation-evidence.md).
+
+Macros execute up to 32 validated operations sequentially without a model request between them. Label-based targets are resolved immediately before each operation and must be unique. Package guards, optional visible-text guards and settling delays prevent a stale batch from continuing after a mismatch. Pause or failure discards remaining actions; manual resume takes a fresh screenshot. Disable Starlark execution in Settings when it is not needed. [Tool APIs, limits and security boundaries](docs/automation.md) · [On-device test evidence](docs/automation-evidence.md).
 
 ## Install
 
@@ -89,7 +101,7 @@ Completed responses contribute to displayed goal token usage. A numeric rate-lim
 
 ## Build and test
 
-The app is Java and native Android resources, with no Gradle or bundled third-party dependencies. The supplied scripts require Windows, PowerShell 7, Python 3.10+, a JDK 17+ and Android SDK **platform 36 / build-tools 36.0.0**. CI uses the preinstalled Java 21 and Android SDK from `windows-2025`.
+The app uses Java and native Android resources, with a Go implementation of Starlark and a small JNI byte-array bridge. There is no Gradle. Builds require Windows, PowerShell 7, Python 3.10+, a JDK 17+, Android SDK **platform 36 / build-tools 36.0.0**, and **NDK 29.0.14206865**. CI uses preinstalled Java 21 and Android SDK/NDK packages from `windows-2025`. The scripts fetch a pinned Go SDK and module archives only after a seven-day cooldown and upstream/hash checks. Go builds use a local file proxy with network resolution disabled; the phone receives only the compiled interpreter.
 
 Set `ANDROID_HOME` and `JAVA_HOME` when the tools are not in their standard Android Studio locations. `ANAUTOMAT_JAVA_HOME` overrides JDK selection; `ANAUTOMAT_PYTHON` overrides the Python executable.
 
@@ -108,7 +120,7 @@ Tests download only the locked, checksum-verified test JSON library after its co
 
 ## CI and releases
 
-Main pushes, pull requests and a weekly schedule run the build, JVM tests, security-gate regression tests, dependency age/integrity checks, GitHub advisory audit, Gitleaks secret scanning, actionlint, Android manifest policy, translation parity and CodeQL for Java/Python/Actions. High-severity CodeQL findings fail the job. Development APKs are available as workflow artifacts.
+Main pushes, pull requests and a weekly schedule run the build, JVM tests, security-gate regression tests, dependency age/integrity checks, GitHub advisory audit, Gitleaks secret scanning, actionlint, Android manifest policy, translation parity and CodeQL for Java/Go/C/Python/Actions. High-severity CodeQL findings fail the job. Development APKs are available as workflow artifacts.
 
 CI downloads have a **seven-day cooldown**, exact versions and SHA-256 checksums. Actions are pinned to full commits and their release age is checked before execution. The CodeQL bundle is explicitly locked; the build never requests an unpinned latest SDK/JDK. See [SECURITY.md](SECURITY.md) for the trusted runner-image boundary and failure behavior.
 

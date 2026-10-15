@@ -2,4 +2,7 @@
  <uses-sdk android:minSdkVersion="30" android:targetSdkVersion="36"/>
  <application android:label="anautomat Tests" android:theme="@android:style/Theme.Material.Light.NoActionBar"><activity android:name="dev.androiduse.AutomationFixture" android:exported="true"/></application>
  <instrumentation android:name="dev.androiduse.DeviceTests" android:targetPackage="dev.androiduse"/>
-<instrumentation android:name="dev.androiduse.AutomationDeviceTests" android:targetPackage="dev.androiduse"/><instrumentation android:name="dev.androiduse.AutomationGoalSetup" android:targetPackage="dev.androiduse"/></manifest>
+ <instrumentation android:name="dev.androiduse.AutomationDeviceTests" android:targetPackage="dev.androiduse"/>
+ <instrumentation android:name="dev.androiduse.AutomationGoalSetup" android:targetPackage="dev.androiduse"/>
+ <instrumentation android:name="dev.androiduse.UiTargetTests" android:targetPackage="dev.androiduse"/>
+</manifest>

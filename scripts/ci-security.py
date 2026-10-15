@@ -108,6 +108,21 @@ def check_download(item, days):
         aged(asset["updated_at"], days)
         if asset["browser_download_url"] != item["url"] or asset.get("digest") != "sha256:" + item["sha256"]:
             raise ValueError(f"Upstream asset changed: {item['name']}")
+    elif item.get("kind") == "go_sdk":
+        expected = "https://go.dev/dl/" + item["version"] + ".windows-amd64.zip"
+        if item["url"] != expected or item["asset"] != expected.rsplit("/", 1)[1]:
+            raise ValueError("Unexpected Go SDK URL")
+        with request("https://go.dev/dl/?mode=json&include=all") as response:
+            releases = json.load(response)
+        release = next(r for r in releases if r["version"] == item["version"])
+        asset = next(f for f in release["files"] if f["filename"] == item["asset"])
+        if not release["stable"] or asset["sha256"] != item["sha256"]:
+            raise ValueError("Go SDK upstream checksum changed")
+        with request(item["url"], "HEAD") as response:
+            modified = response.headers.get("Last-Modified")
+            if not modified or timestamp(modified) != timestamp(item["published_at"]):
+                raise ValueError("Go SDK publication metadata changed")
+            aged(modified, days)
     else:
         if not item["url"].startswith(("https://repo.maven.apache.org/maven2/", "https://dl.google.com/dl/android/maven2/")):
             raise ValueError("Unexpected Maven download host")
@@ -119,6 +134,7 @@ def check_download(item, days):
 
 
 def verify(data):
+    go_security("verify")
     for item in data["actions"]:
         check_action(item, data["cooldown_days"])
     # Check the bundled composite action's nested action before allowing execution.
@@ -152,7 +168,9 @@ def download(data, names):
             finally:
                 temporary.unlink(missing_ok=True)
         if path.suffix == ".zip":
-            destination = folder / name
+            # Each SDK archive gets a fresh namespace: removed compiler/stdlib
+            # files from an older SDK must never survive a toolchain update.
+            destination = folder / (name + "-" + item["version"] + "-" + item["sha256"][:16] if item.get("kind") == "go_sdk" else name)
             destination.mkdir(exist_ok=True)
             with zipfile.ZipFile(path) as archive:
                 for member in archive.infolist():
@@ -164,6 +182,7 @@ def download(data, names):
 
 
 def audit(data):
+    go_security("audit")
     for item in data["downloads"]:
         if "ecosystem" not in item:
             continue
@@ -172,6 +191,15 @@ def audit(data):
         if advisories:
             raise ValueError("Vulnerable dependency: " + ", ".join(a["ghsa_id"] for a in advisories))
     print("PASS: GitHub advisory database audit")
+
+
+def go_security(command):
+    # Reuse the same fail-closed network and age checks for the Go module mirror.
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("go_security", ROOT / "scripts/go-security.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    module.run(command)
 
 
 def sandbox_policy(app, namespace):

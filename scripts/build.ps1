@@ -1,4 +1,4 @@
-param([switch]$Release,[string]$Version="1.0.0",[int]$VersionCode=1000000)
+param([switch]$Release,[string]$Version="1.1.0",[int]$VersionCode=1001000)
 $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot -Parent
 . "$PSScriptRoot/environment.ps1"
@@ -8,8 +8,8 @@ if (!(Test-Path $android) -or !(Test-Path "$bt\aapt2.exe")) { throw "Install And
 function Run([string]$tool, [string[]]$arguments) { & $tool @arguments; if ($LASTEXITCODE -ne 0) { throw "$tool failed: $LASTEXITCODE" } }
 Set-Location $root
 & "$PSScriptRoot\sync-icon.ps1"
-& $python scripts/ci-security.py download --name janino --name commons-compiler --name d8
-if($LASTEXITCODE -ne 0){throw 'Verified sandbox dependency download failed'}
+& "$PSScriptRoot/build-native.ps1"
+$native=(Get-Content build/current-native.txt -Raw).Trim()
 $compileRoot=Join-Path $root ('build/compile-'+[Guid]::NewGuid().ToString('N'))
 $classes=Join-Path $compileRoot 'classes'
 $dex=Join-Path $compileRoot 'dex'
@@ -17,12 +17,13 @@ New-Item -ItemType Directory -Force $classes,$dex | Out-Null
 Run "$bt\aapt2.exe" @('compile','--dir','app/res','-o','build/resources.zip')
 Run "$bt\aapt2.exe" @('link','-o','build/base.apk','--manifest','app/AndroidManifest.xml','-I',$android,'-A','app/assets','build/resources.zip','--version-name',$Version,'--version-code',"$VersionCode")
 $sources = @(Get-ChildItem app\src -Recurse -Filter *.java | ForEach-Object FullName)
-Run "$jdk\bin\javac.exe" (@('-encoding','UTF-8','-source','11','-target','11','-classpath',"$android;build/tools/janino.jar;build/tools/commons-compiler.jar;build/tools/d8.jar",'-d',$classes) + $sources)
+Run "$jdk\bin\javac.exe" (@('-encoding','UTF-8','-source','11','-target','11','-classpath',$android,'-d',$classes) + $sources)
 Run "$jdk\bin\jar.exe" @('cf','build/classes.jar','-C',$classes,'.')
-Run "$bt\d8.bat" @('--lib',$android,'--min-api','30','--output',$dex,'build/classes.jar','build/tools/janino.jar','build/tools/commons-compiler.jar','build/tools/d8.jar')
+Run "$bt\d8.bat" @('--lib',$android,'--min-api','30','--output',$dex,'build/classes.jar')
 $classes | Set-Content build/current-classes.txt
 Copy-Item build\base.apk build\unsigned.apk -Force
 foreach($dexFile in Get-ChildItem -LiteralPath $dex -Filter 'classes*.dex'){Run "$jdk\bin\jar.exe" @('uf','build/unsigned.apk','-C',$dex,$dexFile.Name)}
+foreach($abi in 'arm64-v8a','armeabi-v7a','x86_64','x86'){Run "$jdk\bin\jar.exe" @('uf','build/unsigned.apk','-C',$native,"lib/$abi/libstarlark.so")}
 Run "$bt\zipalign.exe" @('-f','4','build/unsigned.apk','build/aligned.apk')
 if ($Version -notmatch '^\d+\.\d+\.\d+$' -or $VersionCode -lt 1) { throw 'Invalid APK version.' }
 if ($Release) {

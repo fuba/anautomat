@@ -1,84 +1,109 @@
-# Java execution and macros
+# Starlark execution and macros
 
-anautomat can write and compile Java on the Android device, use the result in a Goal, and execute a batch of device operations without a model request between each operation. No PC bridge or downloaded runtime is required after installation.
+anautomat writes short Starlark programs on the Android device and executes batches of device operations without a model request between each operation. The APK contains the interpreter; no PC bridge, on-device compiler or runtime download is needed.
 
-## Java tool
+## Program
 
-`run_code` takes a Java 8 method body in `code` and an optional JSON object encoded as a string in `input`. The compiler supplies `org.json.*` and `java.util.*` imports and a `SandboxApi ctx` parameter. Return a JSON value; a complete class, imports, lambdas, streams and arbitrary JDK/Android APIs are unsupported.
+`run_code` takes a Starlark file in `code` and an optional JSON object encoded as a string in `input`. Define `main()` and return a JSON-compatible value. Use ordinary Starlark indentation, functions, loops, comprehensions, strings, lists and dictionaries.
 
-```java
-JSONArray values = ctx.input.getJSONArray("values");
-long sum = 0;
-for (int i = 0; i < values.length(); i++) {
-    sum += values.getLong(i);
-}
-ctx.state.put("sum", sum);
-ctx.log("sum=" + sum);
-return new JSONObject().put("sum", sum);
+```python
+def main():
+    total = 0
+    for i in range(1, 101):
+        total += i * i
+
+    ui.fill("Result", str(total))
+    ui.tap("Verify")
+    state["sum_of_squares"] = total
+    return total
 ```
 
-| API | Purpose |
+The example needs a current screen containing one editable control with the hint `Result` and one visible clickable control with the exact text `Verify`. UI calls queue an operation plan; they do not perform operations while the program is running. The parent validates the entire plan after successful execution and then runs it as a macro. No fresh screen observations are available between operations in that plan. A script failure, invalid result, invalid state or invalid operation record discards the whole plan and state changes. State is committed after program and plan validation, before device execution; it does not attest that the subsequent batch succeeded.
+
+| Value or function | Purpose |
 | --- | --- |
-| `ctx.input` | JSON object supplied to this invocation; defaults to `{}` |
-| `ctx.observation` | Current Goal, screen size, app package, UI nodes and launchable apps; no image or credentials |
-| `ctx.state` | Mutable JSON object retained within the current Goal; resets for a new Goal |
-| `ctx.log(value)` | Bounded log output returned to the planner and displayed in local history |
-| `ctx.macro(JSONArray)` | Queue device actions for validation and execution after the program succeeds |
+| `input` | Read-only input dictionary; defaults to `{}` |
+| `screen` | Read-only observation dictionary: Goal, package, screen size, UI nodes and launchable apps; no image or authentication credentials |
+| `state` | Mutable dictionary retained within the current Goal; reset for a new Goal |
+| `log(value)` | JSON-compatible value or string to the bounded log |
+| `print(...)` | Standard Starlark print, routed to the same bounded log |
+| `macro([action, ...])` | Queue raw macro action dictionaries; at most 32 operations across all API calls |
 
-An allowed API list covers basic strings, math, boxed primitives, collections, JSON, big numbers, dates, SHA-256 and Base64. The exact list is in `JavaBytecodePolicy.java`. File/network access, reflection, `Class`/`getClass`, `System`, `Runtime`, threads, Android APIs, native methods, finalizers and dynamic bytecode are rejected. This is a restricted Java environment, not a full Android SDK or JDK.
+Return strings, booleans, `None`, finite numbers, lists/tuples and dictionaries with string keys. Integers returned in JSON must fit in a signed 64-bit value; use `str(value)` for larger integers. Functions, cycles, non-finite floats and oversized/nested output are rejected. Queued raw actions are copied immediately, so mutating a source dictionary cannot change an already queued operation.
 
-Java source is compiled with Janino, converted to DEX with D8, and loaded from memory with Android's `InMemoryDexClassLoader`. Compilation and execution both happen in a fresh, non-exported `isolatedProcess` service. Generated classes are checked against the API allowlist before DEX conversion. The generated program receives no Android `Context`, Binder connection or app storage handle. No JavaScript engine is included.
+## Device API
 
-## Code-generated device operations
+| Call | Operation |
+| --- | --- |
+| `ui.fill(target, value)` | Replace text in one editable control, without needing a preliminary tap |
+| `ui.tap(target)` | Click one labelled control, or its nearest clickable ancestor |
+| `ui.tap_at(x, y)` | Tap screenshot pixel coordinates |
+| `ui.long_press_at(x, y)` | Long press screenshot pixel coordinates |
+| `ui.swipe(x, y, x2, y2)` | Swipe between screenshot pixel coordinates |
+| `ui.text(value)` | Replace the focused editable field |
+| `ui.input_text(value)` | Append through the input method; Android 13+ and a valid input connection required |
+| `ui.enter()` | Send Enter through the input method |
+| `ui.launch(package)` | Launch an installed app |
+| `ui.back()`, `ui.home()`, `ui.recents()` | Android navigation |
+| `ui.notifications()`, `ui.quick_settings()` | Open the corresponding Android panel |
+| `ui.wait(delay_ms)` | Wait before the next operation |
 
-```java
-long sum = 0;
-for (int i = 1; i <= 100; i++) sum += (long) i * i;
-String pkg = ctx.observation.getString("package");
-JSONArray actions = new JSONArray()
-    .put(new JSONObject()
-        .put("type", "tap").put("x", 180).put("y", 240)
-        .put("expect_package", pkg).put("expect_text", "Result"))
-    .put(new JSONObject()
-        .put("type", "text").put("text", String.valueOf(sum))
-        .put("expect_package", pkg));
-ctx.macro(actions);
-return new JSONObject().put("sumOfSquares", sum);
+All calls accept `app="package.name"` and `expect_text="literal visible text"`. Calls other than `wait` also accept `delay_ms=0..2000`, the settling time **after** the operation. Defaults are 100 ms, or 700 ms for `launch`.
+
+`app` defaults to `screen["package"]` independently for every call. After an app launch or a cross-app transition, specify the destination package explicitly for subsequent operations. The program cannot assume that a queued launch has already completed.
+
+```python
+def main():
+    ui.launch("com.example.notes")
+    ui.tap("New note", app="com.example.notes", delay_ms=400)
+    ui.fill("Title", "Build notes", app="com.example.notes")
+    return "note prepared"
 ```
 
-Coordinates must come from the current screenshot. This example demonstrates the API; its coordinates are not a reusable target for other screens. A Java exception, invalid result, quota failure or invalid queued action prevents the batch from starting. State is committed only after successful execution and complete batch validation.
+Only use selectors and app packages from actual observations. Label selectors match exact visible text, accessibility description or input hint. A selector beginning with `id:` matches an accessibility resource ID, such as `id:com.example.notes:id/title`. Lookup occurs immediately before execution, requires a unique match and fails closed on an oversized UI tree. Hidden controls do not match; `fill` requires an enabled editable control. Use `tap_at` when the observed screen does not expose an unambiguous label. Coordinates must come from the current screenshot.
 
-## Macro tool
+The host independently checks every touch/text operation's expected app package. Guards are checked by the macro executor and again immediately before dispatch, including after hiding the floating menu. Missing targets, multiple matches, disabled controls, rejected Android actions or changed guards stop the remaining batch.
 
-The planner can also return `type: "macro"` with an `actions` array directly. Macro items use existing primitives: tap, long press, swipe, text replacement, text input, Enter, app launch, navigation, notification/quick-settings panels and wait. They cannot contain another macro, `run_code`, `done` or `blocked`.
+## Macro lifecycle
 
-The entire batch is validated first. Gestures run sequentially, waiting for Android's completion callback. Every touch or text operation must include `expect_package`. An optional `expect_text` checks literal visible text or accessibility descriptions immediately before the action. `delay_ms` controls settling time after an operation; its default is 100 ms. Use a larger delay for app launches and transitions and small batches when the next screen is uncertain. There is no model observation between macro operations.
+The planner can also use `type: "macro"` with an `actions` array directly. Items support tap, long press, swipe, text replacement/input, Enter, app launch, navigation, notification/quick-settings panels and wait. The label-based forms are `tap_target` and `fill`, with `target` holding the selector. Tools and nested macros are forbidden inside a macro.
 
-Pause, Stop, a failed guard, a failed action or a timeout discards remaining operations. Tool history records the completed count and whether an operation was in flight; already dispatched Android gestures may finish. Resuming captures a new screen and asks the planner for a fresh action. It never resumes an old batch automatically. Operations that already completed are not rolled back.
+The complete batch is validated before its first operation. Gestures run sequentially and wait for Android's completion callback. Touch and text operations require `expect_package`; `expect_text` optionally checks literal visible text or descriptions. Use settling delays for transitions and small batches when the next screen is uncertain.
+
+Pause, Stop, a failed guard, a failed action or a timeout discards remaining operations. History records the completed count and whether an operation was in flight. Already dispatched Android gestures may finish. Resuming captures a new screen and asks the planner for a fresh action; an old batch is never resumed automatically. Completed operations are not rolled back.
 
 ## Limits and isolation
 
 | Resource | Limit |
 | --- | --- |
-| Source | 32,768 characters |
-| JSON input / state | 16,384 / 8,192 characters |
-| Tool result / logs | 65,536 / 8,192 characters |
-| JSON nesting | 32 levels, checked before parsing in the app process |
-| Compilation / execution | 8 seconds / 2 seconds after compilation |
+| Starlark source | 32,768 UTF-8 bytes |
+| JSON input / observation / state | 16,384 / 131,072 / 8,192 UTF-8 bytes |
+| Tool result / logs | 65,536 / 8,192 UTF-8 bytes |
+| JSON nesting | 32 levels, also checked before parsing results in the app process |
+| Interpreter computation | 100,000 Starlark steps; 2-second cancellation deadline including parsing |
+| Android process | 8-second startup deadline; 2.5-second execution watchdog |
 | Parent-side deadline | 15 seconds including binding and startup |
 | Macro | 32 operations; 15 seconds planned gesture/delay time; 20 seconds overall |
 | Per-operation delay | 0–2,000 ms |
 
-A service watchdog samples Java heap growth every 50 ms: 160 MiB during compilation and 48 MiB during execution. These are growth thresholds, not strict resident-memory caps; Android's process heap limit still applies and allocations can exceed a threshold before the next sample. Failure affects the disposable service, and the parent also enforces its deadline. Bindings are released on completion and cancellation; processes are not reused between invocations. No shell commands, native libraries or generated code files are loaded by the program.
+Each invocation binds a fresh non-exported Android `isolatedProcess` service. The Go implementation of Starlark receives only converted Starlark values and explicitly registered host functions. The JNI boundary accepts and returns UTF-8 JSON byte arrays; no Java/Android object references or callbacks enter the interpreter. Source is interpreted in memory. Java compilation, bytecode API filtering, runtime DEX conversion and dynamic class loading have been removed.
 
-The sandbox's OS boundary protects app credentials and storage; the bytecode allowlist narrows what programs can request inside that boundary. The parent independently validates returned JSON, state and the full operation batch. A sandbox result cannot bypass the device operation validator. Macro actions still have the app's existing accessibility capabilities and require authorization by the user's Goal; the model's sensitive-action instructions are not a complete authorization enforcement system.
+Imports/module loading, reflection, Java/Android APIs, direct filesystem/network access, the system clock, threads, processes and native calls are unavailable to scripts. Recursion, `while` and top-level control statements remain disabled. These are language/API restrictions, not string-based checks for forbidden words.
 
-Disable code execution in Settings to remove `run_code` from the model's action schema. Disabling it during a code invocation pauses the Goal and cancels the invocation. Macros and existing screen controls remain available.
+A computation-step limit does not bound the cost of one builtin operation. Execution uses at most two Go scheduler processors. Go's 48 MiB runtime memory limit is a **soft GC target**. A separate Android watchdog samples process PSS growth every 50 ms and kills the disposable process above 80 MiB growth. Neither is a strict resident-memory cap; an allocation can exceed a threshold before the next sample. The watchdog stays outside the Go interpreter, and the parent handles process death, deadlines and cancellation. Bindings are released on every completion/cancellation and processes are not reused.
 
-Generated source, console output and results appear in the bounded encrypted app log and in configured plain-text log exports. Planner context retains up to 40 events / 256 KiB plus current state. Exports can contain code and visible-screen data; authentication credentials are never passed into the sandbox.
+The parent rechecks JSON bounds, state and the complete macro independently. A successful sandbox result cannot bypass the operation validator. Device operations still use the app's accessibility capabilities and require authorization by the user's Goal. Model instructions about sensitive actions are not a complete authorization enforcement system.
 
-## Validation
+Disable Starlark execution in Settings to remove `run_code` from the planner's schema. Disabling it during an invocation pauses the Goal and cancels the process. Macro and ordinary screen controls remain available.
 
-`scripts/test.ps1` runs real Java compilation/execution, API-denial tests, JSON bounds and deterministic macro callback/cancellation tests. `scripts/test-device.ps1` also checks isolated-process compilation, DEX loading, forbidden APIs, loop/memory termination, code-to-macro integration and pause without replay on Android. Its fixture Activity is a separate offline test app and is not packaged in anautomat.
+Generated source, logs and results appear in bounded encrypted app history and configured plain-text log exports. Exports can contain source and visible-screen data. Planner context retains up to 40 events / 256 KiB plus current state. Authentication credentials are never passed to the interpreter.
 
-For the opt-in live model test, install the test APK, run the `AutomationGoalSetup` instrumentation to preserve the original Goal and configure the test, open `dev.androiduse.tests/dev.androiduse.AutomationFixture`, and start the Goal through the floating controls. The task computes the sum of squares from 1 through 100 in Java and uses a generated macro to input and verify `338350`. Run `AutomationGoalSetup` with `-e restore true` afterward to restore the original Goal. No external communications or file operations are part of the fixture task; the planner uses its normal ChatGPT connection.
+## Build and validation
+
+`security/go.lock.json` records exact module versions, upstream publication times, archive/module SHA-256 hashes and Go checksum-database records. The pinned Go SDK is covered by `security/dependencies.lock.json`. Downloads require the existing seven-day cooldown and advisory checks. Go builds use a local file proxy, a local-only toolchain and disabled VCS resolution. SDK/NDK packages must already be installed. Third-party notices are included in the app.
+
+`scripts/test.ps1` runs the protocol/macro tests plus real Starlark programs, rejected host access, quotas, immutable inputs, JSON cycles/alias expansion and Unicode checks. `scripts/test-device.ps1` checks the isolated process, native UTF-8 boundary, execution/memory pressure, cancellation, real label-based fill/click operations and pause without replay.
+
+The opt-in live model fixture is an offline test Activity, never packaged in anautomat. `scripts/test-device.ps1 -PrepareGoal` preserves the user's draft and configures a sum-of-squares Goal. Open `dev.androiduse.tests/dev.androiduse.AutomationFixture` and start that Goal through the floating controls. The expected result is `PASS: 338350`. Run `scripts/test-device.ps1 -RestoreGoal` afterward. The task authorizes only the fixture screen; its planner uses the normal ChatGPT connection.
+
+Primary references: [Starlark language](https://github.com/bazelbuild/starlark), [Go implementation and resource-limit caveats](https://github.com/google/starlark-go), [embedding API](https://pkg.go.dev/go.starlark.net/starlark).

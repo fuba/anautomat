@@ -7,8 +7,8 @@ import org.json.*;
 /** Fully validate the entire batch before the first device operation. No nested tools. */
 final class MacroPlan {
  static final int MAX_ACTIONS=32,MAX_MILLIS=15000,DEFAULT_DELAY=100;
- static final Set<String> TYPES=new HashSet<>(Arrays.asList("tap","long_press","swipe","text","input_text","press_enter","launch","back","home","recents","notifications","quick_settings","wait"));
- static final Set<String> KEYS=new HashSet<>(Arrays.asList("type","reason","x","y","x2","y2","text","package","delay_ms","expect_package","expect_text"));
+ static final Set<String> TYPES=new HashSet<>(Arrays.asList("tap","tap_target","fill","long_press","swipe","text","input_text","press_enter","launch","back","home","recents","notifications","quick_settings","wait"));
+ static final Set<String> KEYS=new HashSet<>(Arrays.asList("type","reason","x","y","x2","y2","text","target","package","delay_ms","expect_package","expect_text"));
  final JSONArray actions;final int count;
  MacroPlan(JSONArray input,int width,int height)throws Exception{
   if(input.length()<1||input.length()>MAX_ACTIONS||input.toString().length()>32768)throw new IOException("Macro must contain 1 to 32 bounded actions");
@@ -19,7 +19,7 @@ final class MacroPlan {
    if(!action.has("reason"))action.put("reason","");Protocol.validatePrimitive(action,width,height);
    int delay=delay(action);duration+=delay+gestureDuration(action);
    for(String key:new String[]{"expect_package","expect_text"})if(action.has(key)&&!action.isNull(key)&&(!(action.get(key) instanceof String)||action.getString(key).isEmpty()||action.getString(key).length()>256))throw new IOException("Invalid macro guard");
-   if(Arrays.asList("tap","long_press","swipe","text","input_text","press_enter").contains(action.getString("type"))&&guard(action,"expect_package").isEmpty())throw new IOException("Touch and text macros require expect_package");
+   if(Arrays.asList("tap","tap_target","fill","long_press","swipe","text","input_text","press_enter").contains(action.getString("type"))&&guard(action,"expect_package").isEmpty())throw new IOException("Touch and text macros require expect_package");
    if(action.has("expect_package")&&!action.isNull("expect_package")&&!action.getString("expect_package").matches("[a-zA-Z0-9_.]+"))throw new IOException("Invalid package guard");
   }if(duration>MAX_MILLIS)throw new IOException("Macro duration limit exceeded");count=actions.length();
  }

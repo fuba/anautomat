@@ -123,10 +123,10 @@
  <string name="update_end_goal">End the current Goal before installing an update.</string>
  <string name="update_allow_install">Allow updates from anautomat in Settings, then tap Install again.</string>
  <string name="update_install_failed">Could not open the Android installer.</string>
- <string name="code_execution">Allow Java execution</string>
- <string name="code_limits">Isolated process · build 8 s / run 2 s · restricted APIs</string>
- <string name="sandbox_running">Running Java</string>
- <string name="sandbox_failed">Java failed: </string>
+ <string name="code_execution">Allow Starlark execution</string>
+ <string name="code_limits">Isolated process · 100,000 steps / 2 s · controlled APIs</string>
+ <string name="sandbox_running">Running Starlark</string>
+ <string name="sandbox_failed">Starlark failed: </string>
  <string name="sandbox_disabled">Code execution is disabled</string>
  <string name="sandbox_result">Result: </string>
  <string name="macro_progress">Macro %1$d/%2$d</string>
