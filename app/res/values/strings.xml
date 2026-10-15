@@ -43,7 +43,7 @@
  <string name="app_not_found">App not found</string>
  <string name="action_failed">"Action failed: "</string>
  <string name="stopped">Stopped</string>
- <string name="run_goal">Run goal  →</string>
+ <string name="run_goal">Run goal</string>
  <string name="continue_goal">Continue</string>
  <string name="screen_disclosure">Screenshots and visible text are sent to ChatGPT while a goal runs.</string>
  <string name="reload">Reload</string>
@@ -102,4 +102,8 @@
  <string name="sign_in_return_failed">Sign-in could not be completed. Return to anautomat for details.</string>
  <string name="retry_inference">Retry %1$d/%2$d in %3$d seconds</string>
  <string name="error_paused">Paused. Press Resume to continue this goal.</string>
+ <string name="stop_goal">End goal</string>
+ <string name="cancel_sign_in">Cancel sign-in</string>
+ <string name="step_status">" • Step %1$d"</string>
+ <string name="goal_locked">End the current goal before editing it.</string>
 </resources>

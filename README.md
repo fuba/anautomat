@@ -18,7 +18,7 @@ The video shows a real emulator run. The 54-second edit labels accelerated secti
 2. Install the APK and open anautomat. Android may ask you to allow installation from the browser or file manager.
 3. Open **Accessibility settings** and enable anautomat. On devices that restrict accessibility for sideloaded apps, use **App info → Allow restricted settings**, then return to Accessibility settings.
 4. Choose **Continue with ChatGPT** and complete sign-in and consent in the system browser. After the app verifies and saves the credentials, it returns to the control center. If your device blocks the automatic return, tap **Open anautomat** on the completion page.
-5. Reload the available models if needed, enter a goal, and choose **Run goal**.
+5. Reload the available models if needed, enter a goal, and press **▶**.
 
 Execution needs internet access and a ChatGPT account with access to the requested plan-inference scope and models. Sign-in happens on the Android device. No PC bridge, Codex CLI, API key, or adb connection is required after installation. This is an independent experimental project, not an OpenAI or Google product.
 
@@ -27,13 +27,13 @@ Release APKs use a persistent release signing certificate. Development APKs use 
 ## Controls
 
 - The translucent circular button stays above other apps while the accessibility service is connected. Drag it to reposition; tap it to open the menu in place.
-- Opening the menu keeps execution running. Both the control center and floating menu have pause/play icons. Pause stops inference; play resumes the same goal, action history, token meter and step budget.
+- Opening the menu keeps execution running. The control center and floating menu use the same goal-control component: microphone, primary play/pause button, stop, and current status. The primary button starts an idle goal, pauses a running goal, resumes a paused goal, or continues after the step limit. Its tooltip and accessibility label describe the current action.
 - The microphone opens Android's speech recognizer. Review the recognized goal before running it. Speech service availability and audio processing depend on the installed provider.
-- **Open control center** returns to the app. Use the stop button there to end execution.
-- Both GOAL fields share a persistent draft and synchronize while typing, including voice input. An active run keeps its starting goal; edits affect the next new run.
+- **■** ends the current session in either surface. **Open control center** returns to the app. Sign-in cancellation is a separate action in the connection section.
+- Both GOAL fields share a persistent draft and synchronize while typing, including voice input from either surface. During execution, pause, or a step-limit stop, both fields show the active goal and editing/voice input is locked. End the session with **■** before changing the goal.
 - The white orbiting point indicates execution. A small pause badge indicates pause. A read-only ticker near the bottom shows progress when the main app is hidden.
 
-The default step budget is **100** observations/inference requests. Change **Step limit** in the app. On exhaustion, **Continue** appears in the app and menu. It grants another configured budget while preserving the active goal, action history, cumulative step number, token usage and log file. Execution/continuation state is held in memory and is lost when the service or process stops. Each inference has a 150-second timeout.
+The default step budget is **100** observations/inference requests. Change **Step limit** in the app. On exhaustion, **▶** continues in either surface. It grants another configured budget while preserving the active goal, action history, cumulative step number, token usage and log file. Execution/continuation state is held in memory and is lost when the service or process stops. Each inference has a 150-second timeout.
 
 Temporary response failures, interrupted streams, network timeouts and eligible HTTP failures trigger at most two automatic retries, with approximately 2- and 4-second backoff plus jitter. Valid `Retry-After` delays are honored; delays longer than a day pause instead. Authentication, permission, quota and invalid-response errors pause immediately. After retries are exhausted, press the play icon to resume manually. Each retry captures a fresh screen and counts toward the configured step budget. Only inference is retried; partially streamed actions are discarded and device actions are never replayed by the retry mechanism. The [OpenAI error guide](https://developers.openai.com/api/docs/guides/error-codes) describes the backoff and rate-limit behavior used here.
 

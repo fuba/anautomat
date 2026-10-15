@@ -1,5 +1,9 @@
-Retry temporary ChatGPT response failures without losing the active goal. Inference gets up to two automatic retries with exponential backoff, jitter and Retry-After support. Each retry observes the current screen; partial actions are discarded and device actions are never replayed by this mechanism.
+Unify the app and floating-menu goal controls using one shared component. Both now show the same GOAL field, microphone, primary play/pause button, stop button and session status.
 
-When retries are exhausted, or an error needs user action, the goal pauses. Press the play icon in the control center or floating menu to resume with the same goal, action history, token meter and remaining step budget. Pause cancels pending retries. Resume is available while the current accessibility-service session stays alive.
+- Play starts a new goal, resumes a paused goal, or continues after the step limit.
+- While running, the same primary button becomes Pause.
+- Stop ends the session. Goal editing and voice input unlock after stopping, so Resume always refers to the displayed goal.
+- Voice input is available in both surfaces; returning from voice input in the app no longer opens the floating menu.
+- Sign-in cancellation is separate from ending a goal.
 
-Includes regression checks for bounded retries, error classification, server delays, manual resume and cancellation of stale callbacks. The APK uses the existing release signing key, so it can update the installed release in place.
+Also guard overlay creation before accessibility-service connection and preserve menu visibility during configuration changes. Tests exercise shared controls across start, pause, resume, budget continuation and stop. The APK uses the existing release signing key for in-place updates.

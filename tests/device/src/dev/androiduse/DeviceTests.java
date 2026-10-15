@@ -14,7 +14,7 @@ public final class DeviceTests extends Instrumentation {
   File file=new File(getTargetContext().getNoBackupFilesDir(),"test-credentials.enc");byte[] bytes;try(FileInputStream in=new FileInputStream(file)){bytes=in.readAllBytes();}if(new String(bytes,"ISO-8859-1").contains("TEST_SECRET"))throw new AssertionError("Credentials stored in plaintext");
   bytes[bytes.length-1]^=1;try(FileOutputStream out=new FileOutputStream(file)){out.write(bytes);}boolean rejected=false;try{store.read();}catch(Exception expected){rejected=true;}if(!rejected)throw new AssertionError("Tampered encrypted record accepted");
   store.clear();if(store.read()!=null)throw new AssertionError("Credentials were not deleted");
-  for(String language:new String[]{"en","ja"}){android.content.res.Configuration config=new android.content.res.Configuration(getTargetContext().getResources().getConfiguration());config.setLocales(new android.os.LocaleList(java.util.Locale.forLanguageTag(language)));android.content.Context localized=getTargetContext().createConfigurationContext(config);String expected=language.equals("en")?"Run goal →":"Goal \u3092\u5b9f\u884c →";if(!I18n.text(localized,"run_goal").equals(expected))throw new AssertionError("Locale selection failed: "+language);AgentBubble bubble=new AgentBubble(localized);bubble.state(true,false);if(!bubble.getContentDescription().toString().equals(I18n.text(localized,"menu")+" • "+I18n.text(localized,"running")))throw new AssertionError("Floating accessibility label locale failed");if(!I18n.text(localized,"limit_message",100).contains("100"))throw new AssertionError("Localized limit placeholder failed");}
+  for(String language:new String[]{"en","ja"}){android.content.res.Configuration config=new android.content.res.Configuration(getTargetContext().getResources().getConfiguration());config.setLocales(new android.os.LocaleList(java.util.Locale.forLanguageTag(language)));android.content.Context localized=getTargetContext().createConfigurationContext(config);String expected=language.equals("en")?"Run goal":"Goal \u3092\u5b9f\u884c";if(!I18n.text(localized,"run_goal").equals(expected))throw new AssertionError("Locale selection failed: "+language);AgentBubble bubble=new AgentBubble(localized);bubble.state(true,false);if(!bubble.getContentDescription().toString().equals(I18n.text(localized,"menu")+" • "+I18n.text(localized,"running")))throw new AssertionError("Floating accessibility label locale failed");if(!I18n.text(localized,"limit_message",100).contains("100"))throw new AssertionError("Localized limit placeholder failed");}
   android.content.Intent authReturn=android.content.Intent.parseUri(AuthReturnPage.INTENT,android.content.Intent.URI_INTENT_SCHEME).addCategory(android.content.Intent.CATEGORY_BROWSABLE);
   android.content.pm.ResolveInfo destination=getTargetContext().getPackageManager().resolveActivity(authReturn,android.content.pm.PackageManager.MATCH_DEFAULT_ONLY);
   if(destination==null||!destination.activityInfo.name.equals("dev.androiduse.MainActivity")||!"dev.androiduse".equals(authReturn.getPackage()))throw new AssertionError("Browser return does not resolve to the app");
@@ -29,6 +29,17 @@ public final class DeviceTests extends Instrumentation {
     second.setText("SYNC_SECOND");if(!first.getText().toString().equals("SYNC_SECOND")||!((MainActivity)activity).goal.getText().toString().equals("SYNC_SECOND"))throw new AssertionError("Reverse or app composer sync failed");
     if(GoalSettings.limit(getTargetContext())!=100)throw new AssertionError("Default step limit is not 100");
    }finally{GoalSettings.goal(getTargetContext(),saved);if(holder.getParent()!=null)((android.view.ViewGroup)holder.getParent()).removeView(holder);}
+  });
+  runOnMainSync(()->{
+   AgentService previous=AgentService.instance;String draft=GoalSettings.goal(getTargetContext());ControlService service=new ControlService();service.attach(getTargetContext());AgentService.instance=service;
+   try{service.onConfigurationChanged(new android.content.res.Configuration(getTargetContext().getResources().getConfiguration()));if(service.floating!=null)throw new AssertionError("Unconnected service created an overlay");
+    GoalControls appControls=((MainActivity)activity).goalControls;GoalControls overlayControls=new GoalControls(activity,true,()->{});
+    appControls.refresh();overlayControls.refresh();if(!appControls.primary.getContentDescription().equals(overlayControls.primary.getContentDescription()))throw new AssertionError("Idle controls differ");
+    appControls.activate();if(service.starts!=1)throw new AssertionError("Play did not start idle goal");appControls.refresh();overlayControls.refresh();if(appControls.goal.isEnabled()||overlayControls.goal.isEnabled()||appControls.voice.isEnabled())throw new AssertionError("Active goal is editable");
+    overlayControls.activate();if(service.pauses!=1)throw new AssertionError("Same primary button did not pause");appControls.refresh();overlayControls.refresh();if(!appControls.primary.getContentDescription().equals(I18n.text(activity,"resume"))||!appControls.primary.getContentDescription().equals(overlayControls.primary.getContentDescription()))throw new AssertionError("Paused controls differ");
+    appControls.activate();if(service.resumes!=1||service.starts!=1)throw new AssertionError("Play restarted instead of resuming");service.running=false;service.limitReached=true;appControls.refresh();overlayControls.refresh();if(!appControls.primary.getContentDescription().equals(I18n.text(activity,"continue_goal")))throw new AssertionError("Play does not describe continuation");overlayControls.activate();if(service.continues!=1)throw new AssertionError("Play did not continue budget");
+    appControls.stop.performClick();appControls.refresh();overlayControls.refresh();if(service.stops!=1||!appControls.goal.isEnabled()||!overlayControls.goal.isEnabled())throw new AssertionError("Stop did not unlock both goals");
+   }finally{AgentService.instance=previous;GoalSettings.goal(getTargetContext(),draft);((MainActivity)activity).goalControls.refresh();}
   });
   final RetryService[] retryService=new RetryService[2];final JSONObject retryUsage=new JSONObject().put("total_tokens",57);
   runOnMainSync(()->{RetryService service=new RetryService();service.attach(getTargetContext());retryService[0]=service;service.running=true;service.generation=20;service.goal="Retry test";service.step=7;service.budget.consume();service.history.put("retained action");service.meter.usage(retryUsage);Exception failure=new Protocol.ResponseFailure("ChatGPT response failed",true);
@@ -50,13 +61,23 @@ public final class DeviceTests extends Instrumentation {
     try(InputStream input=getTargetContext().getContentResolver().openInputStream(created)){if(!new String(input.readAllBytes(),java.nio.charset.StandardCharsets.UTF_8).endsWith("Finished\n"))throw new AssertionError("Final log missing");}
    }finally{archive.writer.shutdown();if(created!=null)android.provider.DocumentsContract.deleteDocument(getTargetContext().getContentResolver(),created);new SecureStore(getTargetContext(),"test-archive.enc").clear();}
   }
-  result.putString("stream","PASS: Android Keystore encryption, restart read, tamper rejection, deletion; live bidirectional GOAL sync and default 100 steps; English and Japanese resources; browser return routing; bounded retries and manual resume without stale callbacks; SAF log export updates one UTF-8 file\n");finish(-1,result);
+  result.putString("stream","PASS: Android Keystore encryption, restart read, tamper rejection, deletion; live bidirectional GOAL sync and default 100 steps; English and Japanese resources; browser return routing; bounded retries and manual resume without stale callbacks; unified play/pause/continue/stop controls; SAF log export updates one UTF-8 file\n");finish(-1,result);
  }catch(Throwable e){result.putString("stream","FAIL: "+e.getClass().getSimpleName()+": "+e.getMessage()+"\n");finish(1,result);}finally{store.clear();}}
  static final class RetryService extends AgentService {
   int observations;
   void attach(android.content.Context context){attachBaseContext(context);}
   @Override void observe(int id){if(running&&generation==id)observations++;}
   @Override void log(String message){}
+ }
+
+ static final class ControlService extends AgentService {
+  int starts,pauses,resumes,continues,stops;
+  void attach(android.content.Context context){attachBaseContext(context);}
+  @Override public void startGoal(String value){starts++;goal=value;running=true;paused=false;limitReached=false;}
+  @Override public void pauseGoal(String reason){pauses++;running=false;paused=true;}
+  @Override public void resumeGoal(){resumes++;running=true;paused=false;}
+  @Override public void continueGoal(){continues++;running=true;paused=false;limitReached=false;}
+  @Override public void stopGoal(String reason){stops++;running=false;paused=false;limitReached=false;}
  }
 
 }
