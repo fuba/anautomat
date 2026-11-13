@@ -4,7 +4,7 @@
 
 An Android agent that sees the screen, operates across apps, and runs entirely on the device. Sign in with ChatGPT and keep control through a small floating button.
 
-[Download APK](https://github.com/fuba/anautomat/releases/latest/download/anautomat.apk) · [Watch the demo](https://github.com/fuba/anautomat/releases/download/v0.1.2/anautomat-fractal-demo.mp4) · [Security](SECURITY.md)
+[Download APK](https://github.com/fuba/anautomat/releases/latest/download/anautomat.apk) · [Watch the demo](https://github.com/fuba/anautomat/releases/download/v0.1.2/anautomat-fractal-demo.mp4) · [Security](SECURITY.md) · [iPhone port](docs/ios.md)
 
 [![One goal creates a working Mandelbrot explorer on Android](docs/demo/fractal-demo.gif)](https://github.com/fuba/anautomat/releases/download/v0.1.2/anautomat-fractal-demo.mp4)
 
